@@ -2,7 +2,7 @@
   "note": {
     "heading": "TONIGHT:",
     "hint": "double-click to open",
-    "signoff": "smile :)   -R12"
+    "signoff": "smile :)   -R{prevRound}"
   },
   "principles": [
     "Productivity is Presence.",

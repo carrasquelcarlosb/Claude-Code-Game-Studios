@@ -1,3 +1,4 @@
+import { paintYesWall } from './figure.js';
 /**
  * WorkOS 2002: the virtual operating system drawn on the CRT. Owns the
  * desktop, windows, taskbar (with the shift clock and pay), modal dialogs and
@@ -345,6 +346,16 @@ export class WorkOS {
 
   drawDesktop(c) {
     c.fillStyle = COLORS.desktop; c.fillRect(0, 0, this.W, this.H);
+    // Locked down, the wallpaper becomes Management's wall of YES.
+    if (this.lockdown) {
+      paintYesWall(c, this.W, this.H, '#4a4944');
+      this.drawTaskbar(c);
+      for (const win of this.windows) this.drawWindow(c, win, win === this.windows[this.windows.length - 1]);
+      for (const d of this.dialogs) this.drawDialog(c, d);
+      this.drawToasts(c);
+      this.drawCursor(c);
+      return;
+    }
     c.fillStyle = 'rgba(255,255,255,0.10)';
     c.font = 'bold 13px Tahoma, Verdana, sans-serif';
     c.textAlign = 'center';

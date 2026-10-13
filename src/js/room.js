@@ -32,14 +32,13 @@ const TEX = {
   desk: () => makeTexture(64, 32, (c, w, h) => {
     speckle(c, w, h, '#a69a82', 25, 5);
   }),
-  // The player's desk carries one carved tally mark per previous round.
-  playerDesk: (tallies) => makeTexture(64, 32, (c, w, h) => {
-    speckle(c, w, h, '#a69a82', 25, 5);
-    c.fillStyle = '#5d533f';
-    for (let i = 0; i < Math.min(tallies, 25); i++) {
-      const group = Math.floor(i / 5), k = i % 5, x = 28 + group * 7 + k;
-      if (k === 4) c.fillRect(x - 4, 26, 6, 1); else c.fillRect(x, 23, 1, 6);
-    }
+  // A sticky note signed by a past operator: "smile :)" and their round.
+  note: (color, round) => makeTexture(32, 32, (c, w, h) => {
+    c.fillStyle = color; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(0,0,0,0.08)'; c.fillRect(0, 0, w, 4);
+    c.fillStyle = '#26307a';
+    c.font = 'bold 8px "Comic Sans MS", sans-serif'; c.fillText('smile :)', 2, 12);
+    c.font = 'bold 12px "Comic Sans MS", sans-serif'; c.fillText(`-R${round}`, 4, 27);
   }),
   beige: () => makeTexture(16, 16, (c, w, h) => speckle(c, w, h, '#c9c2a8', 18, 9)),
   keys: () => makeTexture(64, 16, (c, w, h) => {
@@ -83,12 +82,12 @@ function instancedPart(geometry, material, cells, offset, rotY = 0) {
  * Creates the full office scene.
  * @param {object} cfg tuning.json contents
  * @param {THREE.Texture} screenTexture live texture for the player's CRT
- * @param {number} [tallies=12] tally marks carved in the desk (previous rounds)
+ * @param {number} [notes=12] sticky notes beside the monitor, one per previous round
  * @returns {{scene: THREE.Scene, screenMesh: THREE.Mesh, screenCenter: THREE.Vector3,
  *            fluorescent: THREE.PointLight, monitorLight: THREE.PointLight,
  *            panels: THREE.InstancedMesh, ambient: THREE.AmbientLight}}
  */
-export function buildRoom(cfg, screenTexture, tallies = 12) {
+export function buildRoom(cfg, screenTexture, notes = 12) {
   const snap = cfg.render.vertexSnap;
   const { gridRadius: R, cubicleSpacing: S, ceilingHeight: H } = cfg.room;
 
@@ -153,7 +152,7 @@ export function buildRoom(cfg, screenTexture, tallies = 12) {
   box(2.0, 1.45, 0.06, partMat, 0, 0.725, -1.2, desk);
   box(0.06, 1.45, 1.6, partMat, -1.0, 0.725, -0.4, desk);
   box(0.06, 1.45, 1.6, partMat, 1.0, 0.725, -0.4, desk);
-  box(1.6, 0.04, 0.8, lambert(TEX.playerDesk(tallies), snap), 0, 0.74, -0.75, desk);
+  box(1.6, 0.04, 0.8, deskMat, 0, 0.74, -0.75, desk);
   for (const [x, z] of [[-0.75, -0.4], [0.75, -0.4], [-0.75, -1.1], [0.75, -1.1]]) {
     box(0.04, 0.72, 0.04, beigeMat, x, 0.36, z, desk);
   }
@@ -190,18 +189,20 @@ export function buildRoom(cfg, screenTexture, tallies = 12) {
   screenMesh.position.set(0, 0.32, 0.241);
   crt.add(screenMesh);
 
-  // Keyboard, mouse, mug, and 13 sticky notes on the bezel and partition.
+  // Keyboard, mouse and mug.
   box(0.46, 0.03, 0.16, lambert(TEX.keys(), snap), 0, 0.775, -0.5, desk);
   box(0.06, 0.03, 0.1, beigeMat, 0.36, 0.775, -0.5, desk);
   const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.1, 6), lambert(null, snap, { color: '#e5e0d0' }));
   mug.position.set(-0.5, 0.81, -0.6);
   desk.add(mug);
+  // One sticky note per previous round, each signed by that round's operator.
   const noteColors = ['#e8e27a', '#e8e27a', '#f0b8c8', '#e8e27a'];
-  for (let i = 0; i < 13; i++) {
-    const note = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.075),
-      lambert(null, snap, { color: noteColors[i % 4], side: THREE.DoubleSide }));
-    const col = i % 5, row = Math.floor(i / 5);
-    note.position.set(-0.75 + col * 0.1, 1.25 - row * 0.1, -1.165);
+  for (let i = 0; i < Math.min(notes, 20); i++) {
+    const tex = TEX.note(noteColors[i % 4], i + 1);
+    const note = new THREE.Mesh(new THREE.PlaneGeometry(0.095, 0.095),
+      lambert(tex, snap, { side: THREE.DoubleSide }));
+    const col = i % 4, row = Math.floor(i / 4);
+    note.position.set(-0.86 + col * 0.105, 1.3 - row * 0.105, -1.165); // clear of the monitor
     note.rotation.z = ((i * 37) % 7 - 3) * 0.03;
     desk.add(note);
   }

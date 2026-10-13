@@ -92,7 +92,7 @@ async function main() {
     })) });
 
   // The previous operator's sticky note tracks tonight's progress.
-  os.note = uiData.note;
+  os.note = { ...uiData.note, signoff: uiData.note.signoff.replace('{prevRound}', round - 1) };
   os.principles = uiData.principles;
   os.todo = () => [
     { label: 'Ledger.xls', done: ledger ? ledger.progress() : 0, of: 13 },

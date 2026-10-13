@@ -1,5 +1,5 @@
 import { FONT, FONT_BOLD, bevel, inside, wrapText, clipText } from './os.js';
-import { paintFace } from './figure.js';
+import { paintFace, paintYesWall } from './figure.js';
 
 /**
  * The end of the round: an exit interview with Management.
@@ -71,7 +71,8 @@ export class Finale {
     const fate = this.data.fates.find((f) => s.rating >= f.min).text;
     const vars = {
       opening: this.data.opening[this.outcome],
-      tallies: this.round - 1,
+      notes: this.round - 1,
+      round: this.round,
       lapses: s.lapses,
       rating: s.rating.toFixed(2),
       nextRound: this.round + 1,
@@ -213,7 +214,7 @@ export class Finale {
     if (this.t >= 0.7 && !s.hit) {
       s.hit = true;
       this.audio.scareSting();
-      this.glitch = 2.5;
+      this.glitch = 1.1; // enough to tear the image, not enough to hide the face
       this.feeds.figureInWorld = true;
       this.os.overlay = { draw: (c, W, H) => this.drawScareFace(c, W, H) };
     }
@@ -226,11 +227,11 @@ export class Finale {
   }
 
   drawScareFace(c, W, H) {
-    c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+    paintYesWall(c, W, H); // the facade behind Management's face
     const jx = (Math.random() - 0.5) * 10, jy = (Math.random() - 0.5) * 8;
-    const s = 1 + Math.min(0.25, (this.t - 0.7) * 0.4); // pushes towards the glass
-    const w = 210 * s, h = 270 * s;
-    paintFace(c, (W - w) / 2 + jx, (H - h) / 2 + 10 + jy, w, h);
+    const s = 0.8 + Math.min(0.35, (this.t - 0.7) * 0.5); // starts framed by the wall, pushes towards the glass
+    const w = 150 * s, h = 190 * s;
+    paintFace(c, (W - w) / 2 + jx, (H - h) / 2 + jy, w, h);
     c.fillStyle = 'rgba(120,0,0,0.25)';
     for (let y = 0; y < H; y += 3) if (Math.random() < 0.3) c.fillRect(0, y, W, 2);
   }
