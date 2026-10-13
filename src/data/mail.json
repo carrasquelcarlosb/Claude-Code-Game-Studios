@@ -5,69 +5,124 @@
   "completeLines": ["All 13 messages answered.", "", "Outreach campaigns are awaiting your approval."],
   "messages": [
     {
-      "from": "HR Department", "subject": "Welcome back to your shift",
-      "body": "Hello,\n\nThank you for working the late shift again. Please reconcile your ledger, respond to all correspondence and approve pending outreach before 00:00.\n\nRemember: Productivity is Presence.\n\nHR",
-      "replies": ["Thanks for the heads up!", "Noted, will action ASAP.", "Happy to be here."]
+      "from": "HR Department", "fromRating": 4.9, "subject": "Welcome back to your shift",
+      "body": "Hello, valued Operator!\n\nThank you for joining the late shift again. Please reconcile your ledger, respond to all correspondence and approve pending outreach before 00:00.\n\nEvery colleague you interact with tonight will rate you. Your rating is visible to everyone.\n\nRemember: Productivity is Presence.\n\nHR",
+      "replies": [
+        { "text": "So grateful to be here! Let's make it a great one!", "stars": 5 },
+        { "text": "Noted, will action ASAP.", "stars": 3 },
+        { "text": "Understood.", "stars": 2 }
+      ]
     },
     {
-      "from": "IT Helpdesk", "subject": "Scheduled maintenance tonight",
+      "from": "IT Helpdesk", "fromRating": 4.1, "subject": "Scheduled maintenance tonight",
       "body": "Systems will be restarted at the end of this shift. Unsaved work will be lost. Please do not power off Workstation 13 under any circumstances.\n\nIT",
-      "replies": ["Understood, thanks.", "Appreciate the visibility.", "Will keep this top of mind."]
+      "replies": [
+        { "text": "Understood, thanks.", "stars": 3 },
+        { "text": "Thank you SO much for keeping us running!", "stars": 5 },
+        { "text": "Why would I power it off?", "stars": 1 }
+      ]
     },
     {
-      "from": "Dana Price (Accounts)", "subject": "RE: Q3 ledger variance",
-      "body": "Hi,\n\nThe Q3 numbers still don't reconcile. Can you take another pass at the ledger tonight? I know you've looked at it before.\n\nDana",
-      "replies": ["On it. Will circle back.", "Let me dig in and revert.", "Per my last email, it's handled."]
+      "from": "Dana Price (Accounts)", "fromRating": 4.6, "subject": "RE: Q3 ledger variance",
+      "body": "Hi!\n\nThe Q3 numbers still don't reconcile. Can you take another pass at the ledger tonight? I know you've looked at it before.\n\nDana",
+      "replies": [
+        { "text": "On it. Will circle back.", "stars": 3 },
+        { "text": "Didn't I already fix this?", "stars": 1 },
+        { "text": "Anything for you, Dana! Love working with you!", "stars": 5 }
+      ]
     },
     {
-      "from": "Facilities", "subject": "Overhead light, Floor 13",
+      "from": "Facilities", "fromRating": 3.8, "subject": "Overhead light, Floor 13",
       "body": "We are aware the overhead light in your section flickers. A ticket has been open since Round 1. There is no Floor 13 on our building plans, but we will send someone.\n\nFacilities",
-      "replies": ["Thanks, no rush.", "Appreciate you looking into it.", "Happy to sync on next steps."]
+      "replies": [
+        { "text": "Thanks, no rush at all! You're the best!", "stars": 5 },
+        { "text": "What do you mean, no Floor 13?", "stars": 1 },
+        { "text": "Appreciate you looking into it.", "stars": 3 }
+      ]
     },
     {
-      "from": "Mark Ellis", "subject": "RE: RE: lunch?",
+      "from": "Mark Ellis", "fromRating": 4.4, "subject": "RE: RE: lunch?",
       "body": "Still on for lunch tomorrow? You said yes last time.\n\nAnd the time before that.\n\nM",
-      "replies": ["Yes, let's do it!", "Let's pencil something in.", "Let's take this offline."]
+      "replies": [
+        { "text": "Yes!! Wouldn't miss it for the world!", "stars": 5 },
+        { "text": "Let's pencil something in.", "stars": 3 },
+        { "text": "I don't remember saying yes.", "stars": 1 }
+      ]
     },
     {
-      "from": "HR Department", "subject": "Mandatory: Presence Policy",
-      "body": "A reminder that all time away from your screen is logged by the productivity monitor and deducted from your pay.\n\nThere is nothing behind you that requires your attention.\n\nHR",
-      "replies": ["Acknowledged.", "Thanks for the reminder.", "Fully aligned."]
+      "from": "HR Department", "fromRating": 4.9, "subject": "Mandatory: Presence Policy",
+      "body": "A reminder that all time away from your screen is logged by the productivity monitor and deducted from your rating.\n\nThere is nothing behind you that requires your attention.\n\nHR",
+      "replies": [
+        { "text": "Acknowledged.", "stars": 2 },
+        { "text": "Thank you for keeping me present!", "stars": 5 },
+        { "text": "Then what is behind me?", "stars": 1 }
+      ]
     },
     {
-      "from": "Dana Price (Accounts)", "subject": "RE: RE: RE: Q3 ledger variance",
+      "from": "Dana Price (Accounts)", "fromRating": 4.2, "subject": "RE: RE: RE: Q3 ledger variance",
       "body": "You sent me this exact reply already.\n\nWord for word. Same timestamp. Is your mail client looping?\n\nDana",
-      "replies": ["Apologies, will investigate.", "Let me circle back on that.", "Per my last email."]
+      "replies": [
+        { "text": "So sorry Dana! Fixing it right now!", "stars": 5 },
+        { "text": "Let me circle back on that.", "stars": 3 },
+        { "text": "Is it?", "stars": 1 }
+      ]
     },
     {
-      "from": "Mail Delivery System", "subject": "Your automatic reply",
-      "body": "The following automatic reply was generated on your behalf in each of the previous 12 rounds:\n\n    \"{lastReply}\"\n\nNo action is required.",
-      "replies": ["Thanks.", "Thanks.", "Noted."]
+      "from": "Mail Delivery System", "fromRating": 5.0, "subject": "Your automatic reply",
+      "body": "The following automatic reply was generated on your behalf in each of the previous 12 rounds:\n\n    \"{lastReply}\"\n\nIt was rated well. No action is required.",
+      "replies": [
+        { "text": "Thanks.", "stars": 3 },
+        { "text": "Thanks.", "stars": 3 },
+        { "text": "Thank you!", "stars": 5 }
+      ]
     },
     {
-      "from": "IT Helpdesk", "subject": "Unusual activity at Workstation 13",
+      "from": "IT Helpdesk", "fromRating": 3.9, "subject": "Unusual activity at Workstation 13",
       "body": "Our logs show continuous keyboard input at Workstation 13, but the badge reader shows nobody entered the building tonight.\n\nCan you confirm you are at your desk?\n\nIT",
-      "replies": ["Confirmed, I'm at my desk.", "Yes, I'm here.", "Where else would I be?"]
+      "onOpen": { "sound": "footsteps", "soundDelay": 2.5 },
+      "replies": [
+        { "text": "Confirmed! Happily at my desk!", "stars": 5 },
+        { "text": "Yes, I'm here.", "stars": 3 },
+        { "text": "Where else would I be?", "stars": 1 }
+      ]
     },
     {
-      "from": "Mark Ellis", "subject": "RE: RE: RE: RE: lunch?",
+      "from": "Mark Ellis", "fromRating": 3.1, "subject": "RE: RE: RE: RE: lunch?",
       "body": "I walked past your cubicle a minute ago. The chair was empty.\n\nBut the keyboard was still going.\n\nM",
-      "replies": ["Must have been on a break.", "Let's take this offline.", "I'm right here, Mark."]
+      "onOpen": { "sound": "chairCreak", "soundDelay": 3 },
+      "replies": [
+        { "text": "Ha! Must have been on a break!", "stars": 5 },
+        { "text": "Let's take this offline.", "stars": 3 },
+        { "text": "I'm right here, Mark.", "stars": 1 }
+      ]
     },
     {
-      "from": "WORKSTATION 12", "subject": "(no subject)",
-      "body": "is anyone else still here\n\nthe lights stopped flickering on my side\n\nwhat round are you on",
-      "replies": ["Round 13.", "Please contact IT.", "Wrong recipient."]
+      "from": "WORKSTATION 12", "fromRating": 1.2, "subject": "(no subject)",
+      "body": "is anyone else still here\n\nthe lights stopped flickering on my side\n\nwhat round are you on\n\ndont rate me back",
+      "onOpen": { "sound": "typing", "soundDelay": 1 },
+      "replies": [
+        { "text": "Round 13.", "stars": 1 },
+        { "text": "Please contact IT.", "stars": 3 },
+        { "text": "Reported for misuse of mail. Have a great night!", "stars": 5 }
+      ]
     },
     {
-      "from": "HR Department", "subject": "Exit interview: Round 12",
-      "body": "Thank you for your service in Round 12. Your performance has been archived.\n\nYour replacement is already at their desk and has completed onboarding. They will not notice you.\n\nHR",
-      "replies": ["Thank you.", "Thank you.", "Thank you."]
+      "from": "HR Department", "fromRating": 4.9, "subject": "Exit interview: Round 12",
+      "body": "Thank you for your service in Round 12. Your final rating has been archived.\n\nYour replacement is already at their desk and has completed onboarding. They will not notice you.\n\nHR",
+      "replies": [
+        { "text": "Thank you.", "stars": 3 },
+        { "text": "Thank you!", "stars": 4 },
+        { "text": "Thank you!! What an honour!", "stars": 5 }
+      ]
     },
     {
-      "from": "Management", "subject": "Please finish your tasks",
+      "from": "Management", "fromRating": 5.0, "subject": "Please finish your tasks",
       "body": "Finish your work.\n\nThen we can talk.",
-      "replies": ["Understood.", "Understood.", "Understood."]
+      "replies": [
+        { "text": "Understood.", "stars": 5 },
+        { "text": "Understood.", "stars": 5 },
+        { "text": "Understood.", "stars": 5 }
+      ]
     }
   ]
 }

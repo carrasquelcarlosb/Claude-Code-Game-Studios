@@ -3,7 +3,12 @@
   "policy": "POLICY: Reject campaigns sent to internal (@holloway.local) addresses.",
   "reviewFirst": ["Please review the Audience tab and confirm", "the compliance checkbox before deciding."],
   "wrongTitle": "Compliance Violation",
-  "wrongLines": ["This decision violates Outreach Policy 13.", "$1.13 has been deducted. Review the audience."],
+  "wrongLines": ["This decision violates Outreach Policy 13.", "Compliance has rated you accordingly.", "Review the audience."],
+  "errorStages": [
+    { "errors": 1, "blackout": 0.5, "sound": "degauss", "glitch": 0.8 },
+    { "errors": 2, "lightsOut": 2.4, "sound": "chairCreak", "soundDelay": 0.7 },
+    { "errors": 3, "repeat": true, "lightsOut": 2.0, "sound": "footsteps", "soundDelay": 0.4 }
+  ],
   "forcedLines": ["Override in effect.", "This campaign requires approval by Management."],
   "completeTitle": "Outreach Queue Empty",
   "completeLines": ["13 of 13 campaigns processed.", "", "Your round is complete. Please wait for Management."],

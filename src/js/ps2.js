@@ -68,6 +68,7 @@ export class PS2Pipeline {
       uLevels: { value: cfg.colorLevels },
       uDither: { value: cfg.ditherStrength },
       uGlitch: { value: 0 },
+      uExposure: { value: 1 },
       uTime: { value: 0 },
     };
     this.quadScene = new THREE.Scene();
@@ -76,7 +77,7 @@ export class PS2Pipeline {
       uniforms: this.uniforms,
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
       fragmentShader: `
-        uniform sampler2D tScene; uniform vec2 uRes; uniform float uLevels, uDither, uGlitch, uTime;
+        uniform sampler2D tScene; uniform vec2 uRes; uniform float uLevels, uDither, uGlitch, uTime, uExposure;
         varying vec2 vUv;
         float bayer(vec2 p){
           int x = int(mod(p.x, 4.0)), y = int(mod(p.y, 4.0));
@@ -95,7 +96,7 @@ export class PS2Pipeline {
           vec2 px = floor(uv * uRes);
           vec3 col = texture2D(tScene, (px + 0.5) / uRes).rgb;
           col.r = mix(col.r, texture2D(tScene, (px + vec2(uGlitch * 3.0, 0.0) + 0.5) / uRes).r, uGlitch);
-          col = pow(max(col, 0.0), vec3(1.0 / 2.2)); // target is linear; encode for display
+          col = pow(max(col * uExposure, 0.0), vec3(1.0 / 2.2)); // target is linear; encode for display
           col += bayer(px) * uDither / uLevels;
           col = floor(col * uLevels + 0.5) / uLevels;
           gl_FragColor = vec4(col, 1.0);

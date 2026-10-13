@@ -153,6 +153,29 @@ export class WorkOS {
   }
 
   /**
+   * Pops a small rating notice above the tray. Notices stack and fade.
+   * @param {string} text
+   * @param {boolean} good green when true, red when false
+   */
+  toast(text, good) {
+    this.toasts = [...(this.toasts || []), { text, good, life: this.cfg.toastSeconds }].slice(-4);
+  }
+
+  drawToasts(c) {
+    (this.toasts || []).forEach((t, i, all) => {
+      const y = this.H - TASKBAR_H - 16 - (all.length - 1 - i) * 15;
+      c.font = FONT_BOLD;
+      const w = c.measureText(t.text).width + 12, x = this.W - w - 4;
+      c.globalAlpha = Math.min(1, t.life * 2);
+      c.fillStyle = t.good ? '#e8f4e0' : '#f6e0e0'; c.fillRect(x, y, w, 13);
+      c.fillStyle = t.good ? '#2c6a2c' : '#8a1c1c';
+      c.fillRect(x, y, 2, 13);
+      c.fillText(t.text, x + 7, y + 10);
+      c.globalAlpha = 1;
+    });
+  }
+
+  /**
    * Shows a modal dialog. Blocks other input until dismissed.
    * @param {{title:string, lines:string[], button?:string, alert?:boolean, onClose?:Function}} d
    */
@@ -278,6 +301,7 @@ export class WorkOS {
   update(dt) {
     this.time += dt;
     this.blackoutLeft = Math.max(0, (this.blackoutLeft || 0) - dt);
+    this.toasts = (this.toasts || []).filter((t) => (t.life -= dt) > 0);
     if (this.state === 'boot') {
       this.bootTime += dt;
       if (this.bootTime >= this.cfg.bootSeconds) {
@@ -322,14 +346,47 @@ export class WorkOS {
     c.textAlign = 'center';
     c.fillText('HOLLOWAY DATA SOLUTIONS', this.W / 2 + 24, 104);
     c.font = FONT;
-    c.fillText('Productivity is Presence.', this.W / 2 + 24, 118);
+    // Company principles rotate slowly on the wallpaper.
+    const ps = this.principles || ['Productivity is Presence.'];
+    c.fillText(ps[Math.floor(this.time / 20) % ps.length], this.W / 2 + 24, 118);
     c.textAlign = 'left';
 
-    if (!this.lockdown) for (const ic of this.iconLayout()) this.drawIcon(c, ic);
+    if (!this.lockdown) {
+      for (const ic of this.iconLayout()) this.drawIcon(c, ic);
+      this.drawStickyNote(c);
+    }
     for (const win of this.windows) this.drawWindow(c, win, win === this.windows[this.windows.length - 1]);
     this.drawTaskbar(c);
+    this.drawToasts(c);
     for (const d of this.dialogs) this.drawDialog(c, d);
     this.drawCursor(c);
+  }
+
+  /**
+   * The previous operator's sticky note: tonight's tasks with live progress.
+   * Content comes from `this.note` ({heading, hint, signoff}) and `this.todo()`
+   * ([{label, done, of}]); nothing is drawn until both are set.
+   */
+  drawStickyNote(c) {
+    if (!this.note || !this.todo) return;
+    const items = this.todo();
+    const w = 92, h = 34 + items.length * 11 + 18, x = this.W - w - 6, y = 6;
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x + 2, y + 2, w, h);
+    c.fillStyle = '#efe38a'; c.fillRect(x, y, w, h);
+    c.fillStyle = '#e2d375'; c.fillRect(x, y, w, 9);
+    c.fillStyle = '#2a2a6a'; c.font = 'bold 9px "Comic Sans MS", Tahoma, sans-serif';
+    c.fillText(this.note.heading, x + 6, y + 19);
+    c.font = '9px "Comic Sans MS", Tahoma, sans-serif';
+    items.forEach((it, i) => {
+      const ly = y + 31 + i * 11;
+      c.fillStyle = '#2a2a6a';
+      c.fillText(`${it.done >= it.of ? '✓' : '□'} ${it.label}`, x + 6, ly);
+      c.textAlign = 'right'; c.fillText(`${it.done}/${it.of}`, x + w - 6, ly); c.textAlign = 'left';
+      if (it.done >= it.of) { c.fillRect(x + 16, ly - 3, c.measureText(it.label).width, 1); }
+    });
+    const fy = y + 31 + items.length * 11;
+    c.fillStyle = '#6a6a8a'; c.fillText(this.note.hint, x + 6, fy + 2);
+    c.fillStyle = '#9a3a3a'; c.fillText(this.note.signoff, x + 6, fy + 13);
   }
 
   drawIcon(c, ic) {
@@ -387,8 +444,8 @@ export class WorkOS {
     const tw = 92;
     bevel(c, this.W - tw - 2, y + 2, tw, TASKBAR_H - 4, true);
     c.font = FONT;
-    c.fillStyle = this.shift.pay < 0 ? COLORS.alert : '#000';
-    c.fillText(this.shift.payText(), this.W - tw + 2, y + 11);
+    c.fillStyle = this.shift.rating < 3 ? COLORS.alert : '#000';
+    c.fillText(this.shift.ratingText(), this.W - tw + 2, y + 11);
     c.fillStyle = this.shift.remaining < 60 ? COLORS.alert : '#000';
     c.font = FONT_BOLD;
     c.fillText(this.shift.clockText(), this.W - 34, y + 11);

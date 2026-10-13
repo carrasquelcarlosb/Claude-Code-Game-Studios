@@ -250,6 +250,35 @@ The number is a quiet tell, never a joke.
 
 ---
 
+## Direction Update (2026-10-13): Corporate Cult x Social Rating
+
+Decided mid-production: blend a *Severance*-style corporate-cult office with a
+*Nosedive*-style public star rating. Scope chosen: reskin plus the rating
+mechanic. Existing tasks are kept, and no new task types are added. Influences
+are tonal only; no names, terms or iconography from either show are used.
+
+| Area | Before | Now |
+|---|---|---|
+| Score | Pay in dollars | Public star rating, 1.00-5.00, starting at 3.13 |
+| Mail | Any reply completes the task | Each recipient rates your reply 1-5 stars; the gushing one scores best |
+| Look-away | -$0.13/s and a lapse dialog | -0.04 stars/s and a lapse dialog ("Everyone can see it.") |
+| Mistakes | Pay cost (Outreach only) | Rating toasts ("Compliance rated you ★····"), plus dread stings on Ledger and Outreach |
+| Office look | Dark and flickering throughout | Starts overlit and sterile (green carpet, white partitions); dims with shift time and a falling rating |
+| Finale | Pay reinvested | Rating decides the fate line; five stars means "kept exactly as you are, forever" |
+
+**Pillar 3** ("Looking Costs Something") now costs stars. Added fifth pillar:
+
+### Pillar 5: Be Seen Well
+Every action is judged by someone, and the judgement is public.
+
+*Design test*: When a choice is purely functional, give it a social rating.
+
+**Visual Identity Anchor amendment**: the "slightly too clean" rule now opens
+the round literally, as bright and sterile. Darkness is earned through time and
+a falling rating, not given up front. Dread lights-out stings still go fully dark.
+
+---
+
 ## Next Steps
 
 - [ ] Run `/setup-engine` (Three.js, browser)

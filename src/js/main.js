@@ -4,7 +4,7 @@ import { buildRoom } from './room.js';
 import { CameraRig } from './camera-rig.js';
 import { Ambience } from './audio.js';
 import { CrtScreen } from './screen.js';
-import { Shift } from './shift.js';
+import { Shift, starString } from './shift.js';
 import { WorkOS } from './os.js';
 import { Input } from './input.js';
 import { createOutreach } from './apps/outreach.js';
@@ -12,15 +12,22 @@ import { createLedger } from './apps/ledger.js';
 import { createMail } from './apps/mail.js';
 import { Dread } from './dread.js';
 import { Finale } from './finale.js';
+import { Atmosphere } from './atmosphere.js';
+import { AmbientEvents } from './ambient-events.js';
 
-/** Boots the game: loads tuning, builds the room and OS, runs the frame loop. */
+const DATA_FILES = ['tuning', 'ledger', 'mail', 'outreach', 'finale', 'ui', 'ambience'];
+
+/** Boots the game: loads data, builds the room and OS, runs the frame loop. */
 async function main() {
-  const [cfg, ledgerData, mailData, outreachData, finaleData] = await Promise.all(
-    ['./data/tuning.json', './data/ledger.json', './data/mail.json', './data/outreach.json', './data/finale.json'].map((u) => fetch(u).then((r) => r.json())),
+  const [cfg, ledgerData, mailData, outreachData, finaleData, uiData, ambienceData] = await Promise.all(
+    DATA_FILES.map((f) => fetch(`./data/${f}.json`).then((r) => r.json())),
   );
   const canvas = document.getElementById('view');
-  const debug = document.getElementById('debug');
   const overlay = document.getElementById('start');
+  const debug = document.getElementById('debug');
+  // Dev tools (overlay and window.__debug) only with ?debug in the URL.
+  const DEBUG = new URLSearchParams(location.search).has('debug');
+  if (DEBUG) debug.style.display = 'block';
 
   // Which round this is. Only kept in this browser; nothing leaves the machine.
   const ROUND_KEY = 'round13.round';
@@ -33,52 +40,76 @@ async function main() {
   window.addEventListener('resize', resize);
   resize();
 
+  // --- World and systems ----------------------------------------------------
   const pipeline = new PS2Pipeline(renderer, cfg.render);
   const screen = new CrtScreen();
   const room = buildRoom(cfg, screen.texture, round - 1);
   const rig = new CameraRig(cfg.camera, room.screenCenter);
   const audio = new Ambience(cfg.audio);
   const shift = new Shift(cfg.shift);
+  const atmosphere = new Atmosphere(cfg.atmosphere, cfg.lighting, room);
+  const ambient = new AmbientEvents(ambienceData, audio);
   const os = new WorkOS(cfg.os, screen, shift, {
     click: () => audio.mouseClick(),
     error: () => audio.errorChime(),
   });
+  const dread = new Dread({ audio, os, lights: atmosphere });
+  const finale = new Finale(finaleData, {
+    os, shift, audio, round, lights: atmosphere,
+    onEnd: (sum) => showEndCard(sum),
+  });
+  const onDread = (stage, repeats = 0) => dread.trigger(stage, repeats);
 
+  // --- Task apps ------------------------------------------------------------
   // The round is complete once every task app reports done.
   const done = new Set();
   const markDone = (id) => () => {
     done.add(id);
-    if (done.size === 3) onRoundComplete();
+    if (done.size === 3) finale.start('complete');
   };
-  const onRoundComplete = () => finale.start('complete');
 
   // Apps keep their state when their window is closed and reopened.
   let ledger = null, mail = null, outreach = null;
   os.install({ id: 'ledger', title: 'Ledger.xls', icon: 'XL', color: '#9cc890',
-    create: () => (ledger ||= createLedger(ledgerData,
-      { shift, os, sfx: { error: () => audio.errorChime() }, onComplete: markDone('ledger'),
-        onError: (stage, repeats) => dread.trigger(stage, repeats) })) });
+    create: () => (ledger ||= createLedger(ledgerData, {
+      shift, os, sfx: { error: () => audio.errorChime() }, onComplete: markDone('ledger'), onError: onDread,
+    })) });
   os.install({
     id: 'mail', icon: '@', color: '#e8e0a0',
     get title() { return `Mail (${mail ? mail.unread() : mailData.messages.length})`; },
-    create: () => (mail ||= createMail(mailData, { shift, os, onComplete: markDone('mail') })),
+    create: () => (mail ||= createMail(mailData, { shift, os, onComplete: markDone('mail'), onDread })),
   });
   os.install({ id: 'outreach', title: 'Outreach', icon: 'OP', color: '#d8a8a8',
-    create: () => (outreach ||= createOutreach(outreachData, { shift, os, onComplete: markDone('outreach') })) });
+    create: () => (outreach ||= createOutreach(outreachData, {
+      shift, os, onComplete: markDone('outreach'), onError: onDread,
+    })) });
+
+  // The previous operator's sticky note tracks tonight's progress.
+  os.note = uiData.note;
+  os.principles = uiData.principles;
+  os.todo = () => [
+    { label: 'Ledger.xls', done: ledger ? ledger.progress() : 0, of: 13 },
+    { label: 'Mail', done: mail ? mail.progress() : 0, of: 13 },
+    { label: 'Outreach', done: outreach ? outreach.progress() : 0, of: 13 },
+  ];
   os.round = round;
   os.onReady = () => shift.start();
-  shift.on('timeout', () => finale.start('timeout'));
 
+  // --- Shift events ---------------------------------------------------------
+  shift.on('timeout', () => finale.start('timeout'));
+  shift.on('rated', ({ by, stars, delta }) => os.toast(`${by} rated you ${starString(stars)}`, delta >= 0));
   shift.on('lapseEnd', ({ lapse, cost }) => {
     os.dialog({
       title: `Attention Lapse #${lapse}`, alert: true,
-      lines: ['The productivity monitor logged an absence', `from your workstation. $${cost.toFixed(2)} has been deducted.`,
-        'The shift clock does not wait for you.'],
+      lines: ['The productivity monitor logged an absence', `from your workstation. Rating ★ -${cost.toFixed(2)}.`,
+        'Everyone can see it.'],
     });
   });
 
+  // --- Input, pause and end card ---------------------------------------------
   // Pointer lock gates play: clock in to lock, Esc pauses.
   let paused = true;
+  let ended = false;
   const input = new Input(canvas, {
     cursor: (dx, dy) => os.moveCursor(dx * cfg.input.cursorSpeed, dy * cfg.input.cursorSpeed),
     look: (dx, dy) => rig.addLook(dx, dy),
@@ -89,10 +120,9 @@ async function main() {
       if (ended) return;
       paused = !locked;
       overlay.style.display = locked ? 'none' : 'flex';
-      overlay.textContent = 'PAUSED: CLICK TO RETURN TO WORK';
+      overlay.querySelector('.go').textContent = 'PAUSED: CLICK TO RETURN TO WORK';
     },
   });
-  let ended = false;
   overlay.addEventListener('click', () => {
     if (ended) {
       try { localStorage.setItem(ROUND_KEY, String(round + 1)); } catch { /* storage blocked */ }
@@ -103,44 +133,16 @@ async function main() {
     input.lock();
   });
 
-  // Fluorescent flicker: occasional bursts of rapid on/off. Dread can kill
-  // every light in the office for a few seconds, leaving only the CRT.
-  let flickerLeft = 0;
-  let lightsOutLeft = 0;
-  const panelColor = room.panels.material.color.clone();
-  const updateFlicker = (dt) => {
-    if (flickerLeft <= 0 && Math.random() < cfg.lighting.flickerChancePerSecond * dt) {
-      flickerLeft = 0.15 + Math.random() * 0.6;
-    }
-    let level = 1;
-    if (flickerLeft > 0) {
-      flickerLeft -= dt;
-      level = Math.random() < 0.5 ? 0.05 : 0.8 + Math.random() * 0.4;
-    }
-    if (lightsOutLeft > 0) { lightsOutLeft -= dt; level = 0; }
-    room.fluorescent.intensity = cfg.lighting.fluorescentIntensity * level;
-    room.panels.material.color.copy(panelColor).multiplyScalar(lightsOutLeft > 0 ? 0.04 : 1);
-    room.monitorLight.intensity = cfg.lighting.monitorIntensity * (0.95 + Math.random() * 0.05);
-    audio.setBuzz(lightsOutLeft > 0 ? 0 : level < 0.5 ? 0.3 : 1 + (flickerLeft > 0 ? 1.5 : 0));
-  };
-
-  const dread = new Dread({ audio, os, lights: { killFor: (s) => { lightsOutLeft = Math.max(lightsOutLeft, s); } } });
-
-  const finale = new Finale(finaleData, {
-    os, shift, audio, round,
-    lights: { killFor: (s) => { lightsOutLeft = Math.max(lightsOutLeft, s); } },
-    onEnd: (sum) => showEndCard(sum),
-  });
-
   /** Replaces the play view with the end-of-round card. */
   const showEndCard = (sum) => {
     ended = true;
+    ambient.stopAll();
     if (document.pointerLockElement) document.exitPointerLock();
     const fill = (s) => s.replace(/\{(\w+)\}/g, (_, k) => ({ round, nextRound: round + 1 })[k]);
     overlay.innerHTML = '';
     const lines = [
       [fill(finaleData.endCard[sum.outcome]), 'font-size:22px;color:#c8e8d8;margin-bottom:18px'],
-      [`Tasks completed: ${sum.tasks} / 39`], [`Pay: ${sum.pay}`],
+      [`Tasks completed: ${sum.tasks} / 39`], [`Final rating: ${sum.rating}`],
       [`Times you looked away: ${sum.lapses}`], [`Time remaining: ${sum.left}`],
       [fill(finaleData.endCard.continue), 'margin-top:26px;color:#7a9a8c'],
     ];
@@ -150,31 +152,37 @@ async function main() {
       p.style.cssText = `margin:4px 0;${style || ''}`;
       overlay.appendChild(p);
     }
-    overlay.style.flexDirection = 'column';
     overlay.style.display = 'flex';
   };
 
-  window.__debug = { rig, room, os, shift, dread, finale, setPaused: (p) => { paused = p; } }; // dev inspection hook
+  if (DEBUG) window.__debug = { rig, room, os, shift, dread, finale, atmosphere, ambient, setPaused: (p) => { paused = p; } };
 
+  // --- Frame loop -------------------------------------------------------------
   const clock = new THREE.Clock();
   const frame = () => {
     const dt = Math.min(clock.getDelta(), 0.1);
     const t = clock.elapsedTime;
     rig.update(dt);
-    updateFlicker(dt);
     dread.update(dt);
     audio.setListenerYaw(rig.restYaw + rig.yaw);
     if (!paused) {
       os.update(dt);
       finale.update(dt);
       shift.update(dt, rig.lookingAway);
+      if (shift.running) ambient.update(shift.progress * cfg.shift.durationSec, rig.lookingAway);
     }
+    // Mood: bright and sterile at clock-in, draining with time and rating.
+    const gloom = finale.active ? 1 : atmosphere.gloomFor(shift.progress, shift.rating, cfg.shift.startingRating);
+    audio.setBuzz(atmosphere.update(dt, gloom));
+    pipeline.uniforms.uExposure.value = atmosphere.exposure;
+    audio.setTension(shift.progress, shift.running && shift.remaining < 60);
     os.draw();
     pipeline.uniforms.uGlitch.value = (rig.lookingAway && !finale.active ? 0.15 + rig.awayAmount * 0.5 : 0)
       + dread.glitch + finale.glitch;
     pipeline.render(room.scene, rig.camera, t);
-    debug.textContent = `away: ${rig.lookingAway ? 'YES' : 'no'}  lapses: ${shift.lapses}  ` +
-      `clock: ${shift.clockText()}  pay: ${shift.payText()}\nRMB hold = look around   Esc = pause`;
+    if (DEBUG) debug.textContent = `away: ${rig.lookingAway ? 'YES' : 'no'}  lapses: ${shift.lapses}  ` +
+      `clock: ${shift.clockText()}  rating: ${shift.ratingText()}  gloom: ${atmosphere.gloom.toFixed(2)}\n` +
+      'RMB hold = look around   Esc = pause';
     requestAnimationFrame(frame);
   };
   frame();

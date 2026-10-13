@@ -29,6 +29,10 @@ export class Dread {
     if (stage.glitch) this.glitch = Math.max(this.glitch, stage.glitch);
     const delay = stage.soundDelay || 0;
     switch (stage.sound) {
+      case 'typing':
+        // Someone typing in the cubicle directly behind the player.
+        setTimeout(() => this.audio.distantTyping([0.4, 0.8, 4.0], 5), delay * 1000);
+        break;
       case 'degauss':
         this.audio.degauss();
         break;
@@ -52,4 +56,15 @@ export class Dread {
   update(dt) {
     this.glitch = Math.max(0, this.glitch - dt * 1.5);
   }
+}
+
+/**
+ * Picks the dread stage a mistake count has reached: an exact match, or the
+ * last `repeat` stage once the count passes it.
+ * @param {object[]} stages stage list from task data (may be empty)
+ * @param {number} errors mistakes so far
+ * @returns {object|undefined}
+ */
+export function stageFor(stages = [], errors) {
+  return [...stages].reverse().find((s) => errors === s.errors || (s.repeat && errors > s.errors));
 }

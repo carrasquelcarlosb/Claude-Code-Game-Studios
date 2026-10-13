@@ -56,12 +56,13 @@ export class Finale {
     const vars = {
       tasks: s.tasksDone,
       lapses: s.lapses,
-      pay: s.payText(),
+      rating: s.rating.toFixed(2),
       prevRound: this.round - 1,
       nextRound: this.round + 1,
       localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
     };
     const lapse = d.lapses.find((l) => s.lapses <= l.max);
+    vars.fate = d.fates.find((f) => s.rating >= f.min).text.replace('{nextRound}', vars.nextRound);
     const paras = [d.opening[this.outcome], ...d.body, lapse.text, ...d.closing];
     return paras.join('\n\n').replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
   }
@@ -111,7 +112,7 @@ export class Finale {
       this.setPhase('done');
       this.onEnd?.({
         outcome: this.outcome, round: this.round, tasks: this.shift.tasksDone,
-        pay: this.shift.payText(), lapses: this.shift.lapses, left: this.shift.clockText(),
+        rating: this.shift.ratingText(), lapses: this.shift.lapses, left: this.shift.clockText(),
       });
     }
   }

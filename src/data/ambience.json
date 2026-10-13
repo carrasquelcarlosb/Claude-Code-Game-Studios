@@ -1,0 +1,13 @@
+{
+  "_comment": "at = seconds of shift elapsed. pos = [x, y, z] metres from the chair; -Z is towards the monitor, +Z behind.",
+  "events": [
+    { "at": 70,  "sound": "typing",      "pos": [-9, 0.8, -8],   "seconds": 10, "stopOnLook": true },
+    { "at": 150, "sound": "phone",       "pos": [8.4, 0.8, 4.2], "stopOnLook": true },
+    { "at": 245, "sound": "photocopier", "pos": [-12, 0.8, 6] },
+    { "at": 330, "sound": "elevator",    "pos": [16, 1.2, -14] },
+    { "at": 410, "sound": "phone",       "pos": [-4.2, 0.8, -4.2], "stopOnLook": true },
+    { "at": 500, "sound": "typing",      "pos": [0.4, 0.8, 4.2], "seconds": 12, "stopOnLook": true },
+    { "at": 590, "sound": "elevator",    "pos": [6, 1.2, 6] },
+    { "at": 680, "sound": "phone",       "pos": [0.5, 0.8, 3.4], "stopOnLook": true }
+  ]
+}

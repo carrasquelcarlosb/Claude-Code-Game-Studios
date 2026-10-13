@@ -17,9 +17,10 @@ const SEND_SECONDS = 1.3;
  * @param {import('../shift.js').Shift} deps.shift credited per sent reply
  * @param {import('../os.js').WorkOS} deps.os used for the completion dialog
  * @param {() => void} [deps.onComplete] called once when every message is answered
+ * @param {(stage: object) => void} [deps.onDread] fires a message's `onOpen` sting the first time it is read
  * @returns {object} WorkOS app, plus `unread()` for the desktop icon label
  */
-export function createMail(data, { shift, os, onComplete }) {
+export function createMail(data, { shift, os, onComplete, onDread }) {
   const msgs = data.messages.map((m) => ({ ...m, read: false, replied: false }));
   let view = 'inbox';
   let open = null; // index of the message being read
@@ -34,6 +35,7 @@ export function createMail(data, { shift, os, onComplete }) {
     open = i;
     choice = -1;
     view = 'message';
+    if (msgs[i].onOpen && !msgs[i].read) onDread?.(msgs[i].onOpen);
     msgs[i].read = true;
     msgs[i].shownBody = msgs[i].body.replace('{lastReply}', lastReply);
   };
@@ -41,8 +43,10 @@ export function createMail(data, { shift, os, onComplete }) {
   const finishSend = () => {
     const m = msgs[open];
     m.replied = true;
-    lastReply = m.replies[choice];
-    shift.completeTask();
+    const reply = m.replies[choice];
+    lastReply = reply.text;
+    // The recipient rates the reply; gushing scores best.
+    shift.completeTask((reply.stars - 3) * shift.cfg.replyStarWeight, m.from, reply.stars);
     sending = 0;
     view = 'inbox';
     if (!complete && msgs.every((x) => x.replied)) {
@@ -59,6 +63,8 @@ export function createMail(data, { shift, os, onComplete }) {
   return {
     title: data.title,
     rect: { x: 2, y: 2, w: 316, h: 220 },
+    /** @returns {number} messages answered so far */
+    progress: () => msgs.filter((m) => m.replied).length,
 
     /** @returns {number} messages not yet read */
     unread: () => msgs.filter((m) => !m.read).length,
@@ -138,7 +144,7 @@ export function createMail(data, { shift, os, onComplete }) {
     c.font = FONT_BOLD; c.fillText('From:', 54, 11); c.fillText('Subject:', 54, 22);
     c.font = FONT;
     c.fillStyle = m.from === 'Management' ? '#7a0c0c' : '#000';
-    c.fillText(m.from, 98, 11);
+    c.fillText(`${m.from}  ★${m.fromRating.toFixed(1)}`, 98, 11);
     c.fillStyle = '#000';
     c.fillText(clip(c, m.subject, r.w - 102), 98, 22);
 
@@ -153,7 +159,7 @@ export function createMail(data, { shift, os, onComplete }) {
     c.font = FONT_BOLD; c.fillStyle = '#000';
     c.fillText(m.replied ? 'Reply sent.' : 'Quick Reply (1-3):', 4, y + 8);
     y += 11;
-    m.replies.forEach((text, i) => {
+    m.replies.forEach(({ text }, i) => {
       const rect = [4, y, r.w - 8, 12];
       layout.replies.push(rect);
       const selected = choice === i;

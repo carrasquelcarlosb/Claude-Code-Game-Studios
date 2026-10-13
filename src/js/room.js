@@ -20,14 +20,14 @@ function speckle(ctx, w, h, base, spread, seed = 1) {
 }
 
 const TEX = {
-  carpet: () => makeTexture(32, 32, (c, w, h) => speckle(c, w, h, '#4a5250', 70, 7)),
+  carpet: () => makeTexture(32, 32, (c, w, h) => speckle(c, w, h, '#3f6a4c', 60, 7)),
   ceiling: () => makeTexture(32, 32, (c, w, h) => {
     speckle(c, w, h, '#b8b5a4', 30, 3);
     c.fillStyle = '#7d7a6c'; c.fillRect(0, 0, w, 1); c.fillRect(0, 0, 1, h);
   }),
   partition: () => makeTexture(16, 32, (c, w, h) => {
-    speckle(c, w, h, '#6f7468', 40, 11);
-    c.fillStyle = '#55594f'; c.fillRect(0, 0, w, 2);
+    speckle(c, w, h, '#c9ccc0', 30, 11);
+    c.fillStyle = '#9da196'; c.fillRect(0, 0, w, 2);
   }),
   desk: () => makeTexture(64, 32, (c, w, h) => {
     speckle(c, w, h, '#a69a82', 25, 5);
@@ -86,7 +86,7 @@ function instancedPart(geometry, material, cells, offset, rotY = 0) {
  * @param {number} [tallies=12] tally marks carved in the desk (previous rounds)
  * @returns {{scene: THREE.Scene, screenMesh: THREE.Mesh, screenCenter: THREE.Vector3,
  *            fluorescent: THREE.PointLight, monitorLight: THREE.PointLight,
- *            overheadPanel: THREE.Mesh}}
+ *            panels: THREE.InstancedMesh, ambient: THREE.AmbientLight}}
  */
 export function buildRoom(cfg, screenTexture, tallies = 12) {
   const snap = cfg.render.vertexSnap;
@@ -97,7 +97,8 @@ export function buildRoom(cfg, screenTexture, tallies = 12) {
   scene.background = fogColor;
   scene.fog = new THREE.Fog(fogColor, cfg.room.fogNear, cfg.room.fogFar);
 
-  scene.add(new THREE.AmbientLight('#9aa58c', cfg.lighting.ambientIntensity));
+  const ambient = new THREE.AmbientLight('#dfe6d6', cfg.lighting.ambientIntensity);
+  scene.add(ambient);
 
   // Floor and ceiling span the whole grid.
   const span = (R * 2 + 3) * S;
@@ -205,5 +206,5 @@ export function buildRoom(cfg, screenTexture, tallies = 12) {
   scene.updateMatrixWorld(true);
   screenMesh.getWorldPosition(screenCenter);
 
-  return { scene, screenMesh, screenCenter, fluorescent, monitorLight, panels };
+  return { scene, screenMesh, screenCenter, fluorescent, monitorLight, panels, ambient };
 }

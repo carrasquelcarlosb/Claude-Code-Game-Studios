@@ -53,6 +53,22 @@ export class Ambience {
     const wg = ctx.createGain(); wg.gain.value = this.cfg.crtWhineVolume;
     whine.connect(wg).connect(this.master);
     whine.start();
+
+    // Shift drone: silent at clock-in, builds with setTension().
+    this.droneGain = ctx.createGain(); this.droneGain.gain.value = 0;
+    this.droneFilter = ctx.createBiquadFilter();
+    this.droneFilter.type = 'lowpass'; this.droneFilter.frequency.value = 120; this.droneFilter.Q.value = 4;
+    this.droneOscs = [[55, 'sine'], [55.3, 'sine'], [110.2, 'sawtooth']].map(([f, type]) => {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = f;
+      o.connect(this.droneFilter); o.start();
+      return o;
+    });
+    this.droneFilter.connect(this.droneGain).connect(this.master);
+    // Heartbeat-slow pulse on the drone level, off until the last minute.
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 1.1;
+    this.pulseDepth = ctx.createGain(); this.pulseDepth.gain.value = 0;
+    lfo.connect(this.pulseDepth).connect(this.droneGain.gain);
+    lfo.start();
   }
 
   /** Short burst of filtered noise, shared by key and mouse clicks. */
@@ -110,6 +126,104 @@ export class Ambience {
     g.linearRampToValueAtTime(0, t + seconds);
   }
 
+  /**
+   * Sets how tense the shift drone is: louder, brighter and beating faster.
+   * @param {number} x 0 (clock-in) .. 1 (end of shift)
+   * @param {boolean} pulse whether the last-minute pulse is on
+   */
+  setTension(x, pulse) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, v = this.cfg.droneVolume;
+    this.droneGain.gain.setTargetAtTime(v * (0.15 + 0.85 * x), t, 0.5);
+    this.droneFilter.frequency.setTargetAtTime(120 + 520 * x, t, 0.5);
+    this.droneOscs[1].frequency.setTargetAtTime(55.3 + 3.2 * x, t, 0.5);
+    this.pulseDepth.gain.setTargetAtTime(pulse ? v * 0.6 : 0, t, 0.3);
+  }
+
+  // --- Ambient events --------------------------------------------------------
+  // Each returns a handle with stop(), so callers can cut a sound early.
+
+  /** Schedules oscillators and returns a handle that stops them all. */
+  handle(nodes) {
+    return { stop: () => nodes.forEach((n) => { try { n.stop(); } catch { /* already stopped */ } }) };
+  }
+
+  /** An old office phone trilling three times, somewhere in the room. */
+  phone(pos) {
+    if (!this.ctx) return null;
+    const ctx = this.ctx, t0 = ctx.currentTime, out = this.spatial(...pos, 0.5, this.cfg.ambientVolume);
+    const gate = ctx.createGain(); gate.gain.value = 0;
+    const trill = ctx.createGain(); trill.gain.value = 0.5;
+    const nodes = [440, 480].map((f) => {
+      const o = ctx.createOscillator(); o.frequency.value = f; o.connect(gate); o.start(t0); o.stop(t0 + 18);
+      return o;
+    });
+    const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 20;
+    lfo.connect(trill).connect(gate.gain); lfo.start(t0); lfo.stop(t0 + 18);
+    for (let r = 0; r < 3; r++) {
+      const s = t0 + r * 6;
+      gate.gain.setValueAtTime(0.5, s); gate.gain.setValueAtTime(0, s + 2);
+    }
+    gate.connect(out);
+    return this.handle([...nodes, lfo]);
+  }
+
+  /** A photocopier starting up by itself: motor, two scan sweeps, a clunk. */
+  photocopier(pos) {
+    if (!this.ctx) return null;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 6), d = new Float32Array(len);
+    let last = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      last = (last + 0.1 * (Math.random() * 2 - 1)) / 1.1;
+      const motor = Math.sin(2 * Math.PI * 98 * t) * 0.25 + Math.sin(2 * Math.PI * 196 * t) * 0.1;
+      const sweep = last * (0.5 + 0.5 * Math.sin(Math.PI * ((t % 2.4) / 2.4))) * 2.5;
+      const env = Math.min(1, t * 2) * Math.min(1, (6 - t) * 2);
+      const clunk = t > 5.2 && t < 5.3 ? (Math.random() * 2 - 1) * (5.3 - t) * 10 : 0;
+      d[i] = (motor + sweep) * env * 0.6 + clunk;
+    }
+    this.playBuffer(d, this.spatial(...pos, 0.8, this.cfg.ambientVolume));
+    return null;
+  }
+
+  /** A two-tone elevator chime. */
+  elevatorDing(pos) {
+    if (!this.ctx) return null;
+    const ctx = this.ctx, t0 = ctx.currentTime, out = this.spatial(...pos, 0.6, this.cfg.ambientVolume);
+    [[1318, 0], [1046, 0.45]].forEach(([f, at]) => {
+      for (const [mult, amp] of [[1, 0.5], [2.76, 0.12], [5.4, 0.05]]) {
+        const o = ctx.createOscillator(); o.frequency.value = f * mult;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t0 + at);
+        g.gain.linearRampToValueAtTime(amp, t0 + at + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + 1.6);
+        o.connect(g).connect(out); o.start(t0 + at); o.stop(t0 + at + 1.7);
+      }
+    });
+    return null;
+  }
+
+  /** Somebody typing in a far cubicle for a while. */
+  distantTyping(pos, seconds = 8) {
+    if (!this.ctx) return null;
+    const ctx = this.ctx, sr = ctx.sampleRate, len = Math.floor(sr * seconds), d = new Float32Array(len);
+    let t = 0.1;
+    while (t < seconds - 0.1) {
+      const start = Math.floor(t * sr), f = 2000 + Math.random() * 1500;
+      for (let k = 0; k < sr * 0.03 && start + k < len; k++) {
+        d[start + k] += (Math.random() * 2 - 1) * Math.exp(-k / (sr * 0.006)) * 0.6
+          + Math.sin(2 * Math.PI * f * k / sr) * Math.exp(-k / (sr * 0.002)) * 0.3;
+      }
+      // Bursts of words with pauses, like someone actually writing.
+      t += Math.random() < 0.12 ? 0.4 + Math.random() * 0.8 : 0.07 + Math.random() * 0.09;
+    }
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+    lp.connect(this.spatial(...pos, 0.9, this.cfg.ambientVolume));
+    const buf = ctx.createBuffer(1, len, sr); buf.getChannelData(0).set(d);
+    const src = ctx.createBufferSource(); src.buffer = buf; src.connect(lp); src.start();
+    return this.handle([src]);
+  }
+
   // --- Dread stings --------------------------------------------------------
 
   /**
@@ -129,14 +243,17 @@ export class Ambience {
     }
   }
 
-  /** Creates an HRTF panner at a world position (metres from the chair). */
-  spatial(x, y, z, gain = 1) {
+  /**
+   * Creates an HRTF panner at a world position (metres from the chair).
+   * @param {number} [bus] channel volume; defaults to the dread volume
+   */
+  spatial(x, y, z, gain = 1, bus = this.cfg.dreadVolume) {
     const p = this.ctx.createPanner();
     p.panningModel = 'HRTF';
     p.distanceModel = 'inverse';
     p.refDistance = 0.8;
     p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z;
-    const g = this.ctx.createGain(); g.gain.value = gain * this.cfg.dreadVolume;
+    const g = this.ctx.createGain(); g.gain.value = gain * bus;
     p.connect(g).connect(this.master);
     return p;
   }

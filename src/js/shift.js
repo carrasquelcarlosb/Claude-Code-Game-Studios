@@ -1,6 +1,7 @@
 /**
- * The round of work: countdown, pay, and the look-away penalty. Pure logic with
- * no DOM or rendering, so it can be unit-tested.
+ * The round of work: countdown, the operator's public star rating, and the
+ * look-away penalty. Pure logic with no DOM or rendering, so it can be
+ * unit-tested.
  */
 export class Shift {
   /** @param {object} cfg tuning.json `shift` block */
@@ -8,8 +9,8 @@ export class Shift {
     this.cfg = cfg;
     /** Seconds left on the clock. */
     this.remaining = cfg.durationSec;
-    /** Current pay in dollars; may go negative. */
-    this.pay = cfg.startingPay;
+    /** Current star rating, clamped to [minRating, maxRating]. */
+    this.rating = cfg.startingRating;
     /** Number of separate times the player looked away. */
     this.lapses = 0;
     /** Total seconds spent looking away. */
@@ -17,12 +18,13 @@ export class Shift {
     this.tasksDone = 0;
     this.running = false;
     this.away = false;
-    this.lapsePayStart = 0;
+    this.lapseRatingStart = 0;
     this.listeners = {};
   }
 
   /**
-   * Subscribes to an event: 'lapseStart', 'lapseEnd' ({lapse, cost}), 'task', 'timeout'.
+   * Subscribes to an event: 'lapseStart', 'lapseEnd' ({lapse, cost}),
+   * 'rated' ({delta, by, stars}), 'task', 'timeout'.
    * @param {string} name
    * @param {(data?: object) => void} fn
    */
@@ -39,13 +41,30 @@ export class Shift {
     this.running = true;
   }
 
-  /** Freezes the clock and pay for good (end of round). */
+  /** Freezes the clock and rating for good (end of round). */
   stop() {
     this.running = false;
   }
 
+  /** Fraction of the shift elapsed, 0..1. */
+  get progress() {
+    return 1 - this.remaining / this.cfg.durationSec;
+  }
+
   /**
-   * Advances the shift. Looking away drains the clock faster and costs pay.
+   * Changes the rating. Silent changes (look-away drain) emit no event.
+   * @param {number} delta stars to add (negative to remove)
+   * @param {string} [by] who rated, for the on-screen notice
+   * @param {number} [stars] the 1-5 score they gave, for the notice
+   */
+  rate(delta, by, stars) {
+    const { minRating, maxRating } = this.cfg;
+    this.rating = Math.min(maxRating, Math.max(minRating, this.rating + delta));
+    if (by) this.emit('rated', { delta, by, stars });
+  }
+
+  /**
+   * Advances the shift. Looking away drains the clock faster and costs rating.
    * @param {number} dt seconds of real time
    * @param {boolean} away whether the player is looking away from the screen
    */
@@ -53,17 +72,17 @@ export class Shift {
     if (!this.running) return;
     if (away && !this.away) {
       this.lapses++;
-      this.lapsePayStart = this.pay;
+      this.lapseRatingStart = this.rating;
       this.emit('lapseStart');
     } else if (!away && this.away) {
-      this.emit('lapseEnd', { lapse: this.lapses, cost: this.lapsePayStart - this.pay });
+      this.emit('lapseEnd', { lapse: this.lapses, cost: this.lapseRatingStart - this.rating });
     }
     this.away = away;
 
     this.remaining -= dt * (away ? this.cfg.awayTimeMultiplier : 1);
     if (away) {
       this.awaySeconds += dt;
-      this.pay -= this.cfg.awayPenaltyPerSec * dt;
+      this.rate(-this.cfg.awayPenaltyPerSec * dt);
     }
     if (this.remaining <= 0) {
       this.remaining = 0;
@@ -72,11 +91,21 @@ export class Shift {
     }
   }
 
-  /** Credits one completed task. */
-  completeTask() {
+  /**
+   * Credits one completed task.
+   * @param {number} [delta] rating change; defaults to `ratingPerTask`
+   * @param {string} [by] who rated it
+   * @param {number} [stars] their 1-5 score
+   */
+  completeTask(delta = this.cfg.ratingPerTask, by, stars) {
     this.tasksDone++;
-    this.pay += this.cfg.payPerTask;
+    this.rate(delta, by, stars);
     this.emit('task');
+  }
+
+  /** Records a mistake: a fixed rating penalty with a notice. */
+  mistake(by) {
+    this.rate(-this.cfg.mistakePenalty, by, 1);
   }
 
   /** @returns {string} remaining time as MM:SS */
@@ -85,8 +114,14 @@ export class Shift {
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  /** @returns {string} pay as $X.XX (negative shown with a minus) */
-  payText() {
-    return `${this.pay < 0 ? '-' : ''}$${Math.abs(this.pay).toFixed(2)}`;
+  /** @returns {string} rating as "★ 3.13" */
+  ratingText() {
+    return `★ ${this.rating.toFixed(2)}`;
   }
+}
+
+/** @returns {string} a 1-5 score as stars and dots, e.g. ★★★·· (hollow stars blur at 9px) */
+export function starString(stars) {
+  const n = Math.max(0, Math.min(5, Math.round(stars)));
+  return '★'.repeat(n) + '·'.repeat(5 - n);
 }

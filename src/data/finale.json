@@ -20,9 +20,15 @@
   ],
   "closing": [
     "This message cannot be deleted. Neither can you.",
-    "Your pay this round: {pay}. It has been reinvested in Round {nextRound}.",
+    "Your final rating this round: ★ {rating}.",
+    "{fate}",
     "Restarting now. You will not remember this.\nYou never do.",
     "- Management"
+  ],
+  "fates": [
+    { "min": 4.5, "text": "Five stars. Everyone loved you. You will be kept exactly as you are, forever. That is what a good rating is for." },
+    { "min": 3.0, "text": "An acceptable score. You will be carried into Round {nextRound}. Try to be more pleasant." },
+    { "min": 0, "text": "Operators below three stars are not carried forward. You will be archived. Your replacement has a much better smile. Your replacement is you." }
   ],
   "deleteRefusal": "This message cannot be deleted.",
   "replyRefusal": "Management does not accept replies.",

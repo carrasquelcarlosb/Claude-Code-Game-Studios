@@ -1,4 +1,5 @@
 import { FONT, FONT_BOLD, bevel, inside, wrapText, clipText } from '../os.js';
+import { stageFor } from '../dread.js';
 
 /**
  * Outreach Pro 3.1: the marketing-approval task. Campaigns are processed in
@@ -16,15 +17,18 @@ const LIST_W = 98;
  * @param {import('../shift.js').Shift} deps.shift pay and task credit
  * @param {import('../os.js').WorkOS} deps.os dialogs
  * @param {() => void} [deps.onComplete] called once when the queue is empty
+ * @param {(stage: object, repeats: number) => void} [deps.onError] dread stage reached
+ *   by wrong decisions, from outreach.json `errorStages`
  * @returns {object} WorkOS app
  */
-export function createOutreach(data, { shift, os, onComplete }) {
+export function createOutreach(data, { shift, os, onComplete, onError }) {
   const items = data.campaigns.map((c) => ({ ...c, status: 'pending' }));
   let current = 0;
   let tab = 'content';
   let audienceSeen = false;
   let confirmed = false;
   let complete = false;
+  let errors = 0; // wrong decisions, drives the dread escalation
   let L = {};
 
   const resetReview = () => { tab = 'content'; audienceSeen = false; confirmed = false; };
@@ -40,7 +44,10 @@ export function createOutreach(data, { shift, os, onComplete }) {
       return;
     }
     if (choice !== it.decision) {
-      shift.pay -= shift.cfg.payPerTask;
+      shift.rate(-shift.cfg.wrongDecisionPenalty, 'Compliance', 1);
+      errors++;
+      const stage = stageFor(data.errorStages, errors);
+      if (stage) onError?.(stage, errors - stage.errors);
       confirmed = false;
       os.dialog({ title: data.wrongTitle, alert: true, lines: data.wrongLines });
       return;
@@ -60,6 +67,8 @@ export function createOutreach(data, { shift, os, onComplete }) {
   return {
     title: data.title,
     rect: { x: 2, y: 2, w: 316, h: 220 },
+    /** @returns {number} campaigns decided so far */
+    progress: () => items.filter((x) => x.status !== 'pending').length,
 
     mouseDown(x, y) {
       if (complete || !L.tabContent) return; // hit-boxes exist after the first draw

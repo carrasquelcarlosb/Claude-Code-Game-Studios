@@ -1,4 +1,5 @@
 import { FONT, FONT_BOLD, FONT_DIGITS as FONT_MONO, bevel } from '../os.js';
+import { stageFor } from '../dread.js';
 
 /**
  * Ledger.xls: the data-entry task. The player copies 13-digit source codes
@@ -48,10 +49,10 @@ export function createLedger(data, { shift, os, sfx, onComplete, onError }) {
       flashErr = 0.5;
       status = `Row ${current + 1}: entry does not match source. Re-enter.`;
       sfx.error();
+      shift.mistake('Data Integrity');
       // Escalating dread: the highest stage reached applies; `repeat` stages
       // fire again on every later error.
-      const stage = [...(data.errorStages || [])].reverse()
-        .find((s) => errors === s.errors || (s.repeat && errors > s.errors));
+      const stage = stageFor(data.errorStages, errors);
       if (!stage?.keepEntry) typed = ''; // a kept wrong entry sits there, as if expected
       if (stage?.status) status = stage.status;
       if (stage?.corruptCode && current > 0) rows[current - 1].code = stage.corruptCode;
@@ -78,6 +79,8 @@ export function createLedger(data, { shift, os, sfx, onComplete, onError }) {
     title: data.title,
     /** Preferred window: nearly full-screen, like a real spreadsheet. */
     rect: { x: 2, y: 2, w: 316, h: 220 },
+    /** @returns {number} rows committed so far */
+    progress: () => rows.filter((x) => x.done).length,
 
     key(e) {
       if (complete) return;
