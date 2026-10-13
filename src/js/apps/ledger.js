@@ -16,9 +16,11 @@ const COLS = { num: 0, src: 16, entry: 112, status: 208 };
  * @param {import('../os.js').WorkOS} deps.os used for the completion dialog
  * @param {{error:Function}} deps.sfx error sound on a mismatch
  * @param {() => void} [deps.onComplete] called once when all rows are done
+ * @param {(stage: object, repeats: number) => void} [deps.onError] called when a
+ *   mistake reaches a dread stage from ledger.json `errorStages`
  * @returns {object} WorkOS app
  */
-export function createLedger(data, { shift, os, sfx, onComplete }) {
+export function createLedger(data, { shift, os, sfx, onComplete, onError }) {
   const rows = data.rows.map((r) => ({ ...r, entry: '', done: false }));
   let current = 0;
   let typed = '';
@@ -26,6 +28,7 @@ export function createLedger(data, { shift, os, sfx, onComplete }) {
   let lastT = 0;
   let status = data.intro;
   let complete = false;
+  let errors = 0; // mistakes this shift, drives the dread escalation
 
   const length = rows[0].code.length;
 
@@ -41,10 +44,18 @@ export function createLedger(data, { shift, os, sfx, onComplete }) {
     const r = rows[current];
     const ok = r.acceptAny ? typed.length === length : typed === r.code;
     if (!ok) {
+      errors++;
       flashErr = 0.5;
-      typed = '';
       status = `Row ${current + 1}: entry does not match source. Re-enter.`;
       sfx.error();
+      // Escalating dread: the highest stage reached applies; `repeat` stages
+      // fire again on every later error.
+      const stage = [...(data.errorStages || [])].reverse()
+        .find((s) => errors === s.errors || (s.repeat && errors > s.errors));
+      if (!stage?.keepEntry) typed = ''; // a kept wrong entry sits there, as if expected
+      if (stage?.status) status = stage.status;
+      if (stage?.corruptCode && current > 0) rows[current - 1].code = stage.corruptCode;
+      if (stage) onError?.(stage, errors - stage.errors);
       return;
     }
     r.entry = typed;

@@ -3,6 +3,17 @@
   "intro": "Copy each Source Code into the Entry column. Enter to commit.",
   "completeTitle": "Ledger Reconciled",
   "completeLines": ["13 of 13 rows reconciled.", "", "Please proceed to Mail. You have messages."],
+  "errorStages": [
+    { "errors": 3, "keepEntry": true,
+      "status": "That is not what you typed last round." },
+    { "errors": 4, "blackout": 0.6, "sound": "degauss", "glitch": 1.0,
+      "corruptCode": "1313131313131",
+      "status": "Display restored. Previous row updated from archive." },
+    { "errors": 5, "lightsOut": 2.4, "sound": "chairCreak", "soundDelay": 0.7,
+      "status": "Please remain seated." },
+    { "errors": 6, "repeat": true, "lightsOut": 2.0, "sound": "footsteps", "soundDelay": 0.4,
+      "status": "Please remain seated. Do not turn around." }
+  ],
   "rows": [
     { "code": "4820193746513" },
     { "code": "7391046285027" },

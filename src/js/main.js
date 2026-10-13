@@ -10,6 +10,7 @@ import { Input } from './input.js';
 import { createOutreach } from './apps/outreach.js';
 import { createLedger } from './apps/ledger.js';
 import { createMail } from './apps/mail.js';
+import { Dread } from './dread.js';
 
 /** Boots the game: loads tuning, builds the room and OS, runs the frame loop. */
 async function main() {
@@ -52,7 +53,8 @@ async function main() {
   let ledger = null, mail = null, outreach = null;
   os.install({ id: 'ledger', title: 'Ledger.xls', icon: 'XL', color: '#9cc890',
     create: () => (ledger ||= createLedger(ledgerData,
-      { shift, os, sfx: { error: () => audio.errorChime() }, onComplete: markDone('ledger') })) });
+      { shift, os, sfx: { error: () => audio.errorChime() }, onComplete: markDone('ledger'),
+        onError: (stage, repeats) => dread.trigger(stage, repeats) })) });
   os.install({
     id: 'mail', icon: '@', color: '#e8e0a0',
     get title() { return `Mail (${mail ? mail.unread() : mailData.messages.length})`; },
@@ -86,8 +88,11 @@ async function main() {
   });
   overlay.addEventListener('click', () => { audio.start(); input.lock(); });
 
-  // Fluorescent flicker: occasional bursts of rapid on/off.
+  // Fluorescent flicker: occasional bursts of rapid on/off. Dread can kill
+  // every light in the office for a few seconds, leaving only the CRT.
   let flickerLeft = 0;
+  let lightsOutLeft = 0;
+  const panelColor = room.panels.material.color.clone();
   const updateFlicker = (dt) => {
     if (flickerLeft <= 0 && Math.random() < cfg.lighting.flickerChancePerSecond * dt) {
       flickerLeft = 0.15 + Math.random() * 0.6;
@@ -97,12 +102,16 @@ async function main() {
       flickerLeft -= dt;
       level = Math.random() < 0.5 ? 0.05 : 0.8 + Math.random() * 0.4;
     }
+    if (lightsOutLeft > 0) { lightsOutLeft -= dt; level = 0; }
     room.fluorescent.intensity = cfg.lighting.fluorescentIntensity * level;
+    room.panels.material.color.copy(panelColor).multiplyScalar(lightsOutLeft > 0 ? 0.04 : 1);
     room.monitorLight.intensity = cfg.lighting.monitorIntensity * (0.95 + Math.random() * 0.05);
-    audio.setBuzz(level < 0.5 ? 0.3 : 1 + (flickerLeft > 0 ? 1.5 : 0));
+    audio.setBuzz(lightsOutLeft > 0 ? 0 : level < 0.5 ? 0.3 : 1 + (flickerLeft > 0 ? 1.5 : 0));
   };
 
-  window.__debug = { rig, room, os, shift, setPaused: (p) => { paused = p; } }; // dev inspection hook
+  const dread = new Dread({ audio, os, lights: { killFor: (s) => { lightsOutLeft = Math.max(lightsOutLeft, s); } } });
+
+  window.__debug = { rig, room, os, shift, dread, setPaused: (p) => { paused = p; } }; // dev inspection hook
 
   const clock = new THREE.Clock();
   const frame = () => {
@@ -110,12 +119,14 @@ async function main() {
     const t = clock.elapsedTime;
     rig.update(dt);
     updateFlicker(dt);
+    dread.update(dt);
+    audio.setListenerYaw(rig.restYaw + rig.yaw);
     if (!paused) {
       os.update(dt);
       shift.update(dt, rig.lookingAway);
     }
     os.draw();
-    pipeline.uniforms.uGlitch.value = rig.lookingAway ? 0.15 + rig.awayAmount * 0.5 : 0;
+    pipeline.uniforms.uGlitch.value = (rig.lookingAway ? 0.15 + rig.awayAmount * 0.5 : 0) + dread.glitch;
     pipeline.render(room.scene, rig.camera, t);
     debug.textContent = `away: ${rig.lookingAway ? 'YES' : 'no'}  lapses: ${shift.lapses}  ` +
       `clock: ${shift.clockText()}  pay: ${shift.payText()}\nRMB hold = look around   Esc = pause`;

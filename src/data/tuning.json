@@ -49,6 +49,7 @@
     "humVolume": 0.12,
     "crtWhineVolume": 0.015,
     "keyVolume": 0.55,
-    "uiVolume": 0.18
+    "uiVolume": 0.18,
+    "dreadVolume": 0.9
   }
 }

@@ -129,6 +129,14 @@ export class WorkOS {
    * Shows a modal dialog. Blocks other input until dismissed.
    * @param {{title:string, lines:string[], button?:string, alert?:boolean, onClose?:Function}} d
    */
+  /**
+   * Cuts the picture to black for a moment. Input still works underneath.
+   * @param {number} seconds
+   */
+  blackout(seconds) {
+    this.blackoutLeft = Math.max(this.blackoutLeft || 0, seconds);
+  }
+
   dialog(d) {
     this.dialogs.push({ button: 'OK', ...d });
     this.sfx.error();
@@ -244,6 +252,7 @@ export class WorkOS {
   /** Advances boot and timers. */
   update(dt) {
     this.time += dt;
+    this.blackoutLeft = Math.max(0, (this.blackoutLeft || 0) - dt);
     if (this.state === 'boot') {
       this.bootTime += dt;
       if (this.bootTime >= this.cfg.bootSeconds) {
@@ -257,7 +266,11 @@ export class WorkOS {
   draw() {
     const c = this.screen.ctx;
     c.textBaseline = 'alphabetic';
-    if (this.state === 'boot') this.drawBoot(c);
+    if (this.blackoutLeft > 0) {
+      c.fillStyle = '#000'; c.fillRect(0, 0, this.W, this.H);
+      // A thin collapsed raster line, like a CRT losing its picture.
+      c.fillStyle = 'rgba(200,230,255,0.5)'; c.fillRect(0, this.H / 2, this.W, 1);
+    } else if (this.state === 'boot') this.drawBoot(c);
     else this.drawDesktop(c);
     this.screen.present();
   }

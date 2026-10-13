@@ -98,6 +98,105 @@ export class Ambience {
     });
   }
 
+  // --- Dread stings --------------------------------------------------------
+
+  /**
+   * Turns the listener to match the player's head so world-placed sounds stay
+   * put when they look around. Yaw follows three.js: 0 faces -Z.
+   * @param {number} yaw radians
+   */
+  setListenerYaw(yaw) {
+    if (!this.ctx) return;
+    const l = this.ctx.listener, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    if (l.forwardX) {
+      const t = this.ctx.currentTime;
+      l.forwardX.setValueAtTime(fx, t); l.forwardY.setValueAtTime(0, t); l.forwardZ.setValueAtTime(fz, t);
+      l.upX.setValueAtTime(0, t); l.upY.setValueAtTime(1, t); l.upZ.setValueAtTime(0, t);
+    } else {
+      l.setOrientation(fx, 0, fz, 0, 1, 0);
+    }
+  }
+
+  /** Creates an HRTF panner at a world position (metres from the chair). */
+  spatial(x, y, z, gain = 1) {
+    const p = this.ctx.createPanner();
+    p.panningModel = 'HRTF';
+    p.distanceModel = 'inverse';
+    p.refDistance = 0.8;
+    p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z;
+    const g = this.ctx.createGain(); g.gain.value = gain * this.cfg.dreadVolume;
+    p.connect(g).connect(this.master);
+    return p;
+  }
+
+  /** Plays a generated mono buffer through a node at an optional delay. */
+  playBuffer(data, dest, delay = 0) {
+    const buf = this.ctx.createBuffer(1, data.length, this.ctx.sampleRate);
+    buf.getChannelData(0).set(data);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    src.connect(dest);
+    src.start(this.ctx.currentTime + delay);
+  }
+
+  /** CRT power-cut thunk followed by a wobbling degauss hum. */
+  degauss() {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 1.4), d = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      const thunk = (Math.random() * 2 - 1) * Math.exp(-t * 40) * 0.9;
+      const hum = Math.sin(2 * Math.PI * (70 - 25 * t) * t) * Math.exp(-t * 2.5) * (0.6 + 0.4 * Math.sin(t * 38));
+      d[i] = thunk + hum * 0.7;
+    }
+    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+    const g = this.ctx.createGain(); g.gain.value = this.cfg.dreadVolume;
+    lp.connect(g).connect(this.master);
+    this.playBuffer(d, lp);
+  }
+
+  /**
+   * Stick-slip creak of an office chair, placed in the room.
+   * @param {number[]} pos [x, y, z] world position; +Z is behind the chair
+   */
+  chairCreak(pos, delay = 0) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.9), d = new Float32Array(len);
+    let t = 0.02;
+    while (t < 0.8) {
+      const f = 520 + 600 * (t / 0.8) + Math.random() * 80; // pitch rises as weight shifts
+      const start = Math.floor(t * sr);
+      for (let k = 0; k < sr * 0.012 && start + k < len; k++) {
+        d[start + k] += Math.sin(2 * Math.PI * f * k / sr) * Math.exp(-k / (sr * 0.003)) * 0.8;
+      }
+      t += 0.006 + Math.random() * 0.02;
+    }
+    this.playBuffer(d, this.spatial(...pos, 1.2), delay);
+  }
+
+  /**
+   * Footsteps on carpet walking in a straight line between two points.
+   * @param {number[]} from [x, y, z]
+   * @param {number[]} to [x, y, z]
+   * @param {number} steps how many footfalls
+   * @param {number} interval seconds between footfalls
+   */
+  footsteps(from, to, steps = 4, interval = 0.55, delay = 0) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.18);
+    for (let s = 0; s < steps; s++) {
+      const k = steps === 1 ? 1 : s / (steps - 1);
+      const pos = from.map((v, i) => v + (to[i] - v) * k);
+      const d = new Float32Array(len);
+      let last = 0;
+      for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        last = (last + 0.25 * (Math.random() * 2 - 1)) / 1.25; // muffled carpet thud
+        d[i] = last * Math.exp(-t * 30) * 2.2 + (t > 0.05 ? (Math.random() * 2 - 1) * Math.exp(-(t - 0.05) * 90) * 0.25 : 0);
+      }
+      this.playBuffer(d, this.spatial(...pos, 1.4), delay + s * interval);
+    }
+  }
+
   /**
    * Sets how hard the fluorescent hum is buzzing, 1 = normal.
    * @param {number} level
