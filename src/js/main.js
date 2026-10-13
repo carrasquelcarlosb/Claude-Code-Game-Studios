@@ -116,7 +116,14 @@ async function main() {
     look: (dx, dy) => rig.addLook(dx, dy),
     lookHold: (held) => { rig.holding = held; },
     click: (down) => os.click(down),
-    key: (e) => { if (!e.repeat) audio.keyClack(); os.key(e); },
+    key: (e) => {
+      // Debug soundboard: letter keys audition each sting (no app uses letters).
+      const board = { k: 'knock', c: 'chairCreak', f: 'footsteps', t: 'typing' };
+      if (DEBUG && board[e.key]) return dread.trigger({ sound: board[e.key] }, 0);
+      if (DEBUG && e.key === 'p') return audio.phone([0.5, 0.8, 3.4]);
+      if (!e.repeat) audio.keyClack();
+      os.key(e);
+    },
     lock: (locked) => {
       if (ended) return;
       paused = !locked;
@@ -183,7 +190,7 @@ async function main() {
     pipeline.render(room.scene, rig.camera, t);
     if (DEBUG) debug.textContent = `away: ${rig.lookingAway ? 'YES' : 'no'}  lapses: ${shift.lapses}  ` +
       `clock: ${shift.clockText()}  rating: ${shift.ratingText()}  gloom: ${atmosphere.gloom.toFixed(2)}\n` +
-      'RMB hold = look around   Esc = pause';
+      'RMB hold = look around   Esc = pause   sounds: k knock  c creak  f steps  t typing  p phone';
     requestAnimationFrame(frame);
   };
   frame();
