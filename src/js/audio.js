@@ -98,6 +98,18 @@ export class Ambience {
     });
   }
 
+  /**
+   * Fades everything to silence.
+   * @param {number} seconds fade length
+   */
+  fadeOut(seconds) {
+    if (!this.ctx) return;
+    const g = this.master.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(0, t + seconds);
+  }
+
   // --- Dread stings --------------------------------------------------------
 
   /**

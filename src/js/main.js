@@ -11,15 +11,21 @@ import { createOutreach } from './apps/outreach.js';
 import { createLedger } from './apps/ledger.js';
 import { createMail } from './apps/mail.js';
 import { Dread } from './dread.js';
+import { Finale } from './finale.js';
 
 /** Boots the game: loads tuning, builds the room and OS, runs the frame loop. */
 async function main() {
-  const [cfg, ledgerData, mailData, outreachData] = await Promise.all(
-    ['./data/tuning.json', './data/ledger.json', './data/mail.json', './data/outreach.json'].map((u) => fetch(u).then((r) => r.json())),
+  const [cfg, ledgerData, mailData, outreachData, finaleData] = await Promise.all(
+    ['./data/tuning.json', './data/ledger.json', './data/mail.json', './data/outreach.json', './data/finale.json'].map((u) => fetch(u).then((r) => r.json())),
   );
   const canvas = document.getElementById('view');
   const debug = document.getElementById('debug');
   const overlay = document.getElementById('start');
+
+  // Which round this is. Only kept in this browser; nothing leaves the machine.
+  const ROUND_KEY = 'round13.round';
+  let round = 13;
+  try { round = Math.max(13, Number(localStorage.getItem(ROUND_KEY)) || 13); } catch { /* storage blocked */ }
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
   renderer.setPixelRatio(1);
@@ -29,7 +35,7 @@ async function main() {
 
   const pipeline = new PS2Pipeline(renderer, cfg.render);
   const screen = new CrtScreen();
-  const room = buildRoom(cfg, screen.texture);
+  const room = buildRoom(cfg, screen.texture, round - 1);
   const rig = new CameraRig(cfg.camera, room.screenCenter);
   const audio = new Ambience(cfg.audio);
   const shift = new Shift(cfg.shift);
@@ -44,10 +50,7 @@ async function main() {
     done.add(id);
     if (done.size === 3) onRoundComplete();
   };
-  const onRoundComplete = () => {
-    // TODO(finale): un-deletable Management email, reveal and reset.
-    console.info('ROUND 13 complete', { lapses: shift.lapses, pay: shift.payText(), left: shift.clockText() });
-  };
+  const onRoundComplete = () => finale.start('complete');
 
   // Apps keep their state when their window is closed and reopened.
   let ledger = null, mail = null, outreach = null;
@@ -62,7 +65,9 @@ async function main() {
   });
   os.install({ id: 'outreach', title: 'Outreach', icon: 'OP', color: '#d8a8a8',
     create: () => (outreach ||= createOutreach(outreachData, { shift, os, onComplete: markDone('outreach') })) });
+  os.round = round;
   os.onReady = () => shift.start();
+  shift.on('timeout', () => finale.start('timeout'));
 
   shift.on('lapseEnd', ({ lapse, cost }) => {
     os.dialog({
@@ -81,12 +86,22 @@ async function main() {
     click: (down) => os.click(down),
     key: (e) => { if (!e.repeat) audio.keyClack(); os.key(e); },
     lock: (locked) => {
+      if (ended) return;
       paused = !locked;
       overlay.style.display = locked ? 'none' : 'flex';
       overlay.textContent = 'PAUSED: CLICK TO RETURN TO WORK';
     },
   });
-  overlay.addEventListener('click', () => { audio.start(); input.lock(); });
+  let ended = false;
+  overlay.addEventListener('click', () => {
+    if (ended) {
+      try { localStorage.setItem(ROUND_KEY, String(round + 1)); } catch { /* storage blocked */ }
+      location.reload();
+      return;
+    }
+    audio.start();
+    input.lock();
+  });
 
   // Fluorescent flicker: occasional bursts of rapid on/off. Dread can kill
   // every light in the office for a few seconds, leaving only the CRT.
@@ -111,7 +126,35 @@ async function main() {
 
   const dread = new Dread({ audio, os, lights: { killFor: (s) => { lightsOutLeft = Math.max(lightsOutLeft, s); } } });
 
-  window.__debug = { rig, room, os, shift, dread, setPaused: (p) => { paused = p; } }; // dev inspection hook
+  const finale = new Finale(finaleData, {
+    os, shift, audio, round,
+    lights: { killFor: (s) => { lightsOutLeft = Math.max(lightsOutLeft, s); } },
+    onEnd: (sum) => showEndCard(sum),
+  });
+
+  /** Replaces the play view with the end-of-round card. */
+  const showEndCard = (sum) => {
+    ended = true;
+    if (document.pointerLockElement) document.exitPointerLock();
+    const fill = (s) => s.replace(/\{(\w+)\}/g, (_, k) => ({ round, nextRound: round + 1 })[k]);
+    overlay.innerHTML = '';
+    const lines = [
+      [fill(finaleData.endCard[sum.outcome]), 'font-size:22px;color:#c8e8d8;margin-bottom:18px'],
+      [`Tasks completed: ${sum.tasks} / 39`], [`Pay: ${sum.pay}`],
+      [`Times you looked away: ${sum.lapses}`], [`Time remaining: ${sum.left}`],
+      [fill(finaleData.endCard.continue), 'margin-top:26px;color:#7a9a8c'],
+    ];
+    for (const [text, style] of lines) {
+      const p = document.createElement('div');
+      p.textContent = text;
+      p.style.cssText = `margin:4px 0;${style || ''}`;
+      overlay.appendChild(p);
+    }
+    overlay.style.flexDirection = 'column';
+    overlay.style.display = 'flex';
+  };
+
+  window.__debug = { rig, room, os, shift, dread, finale, setPaused: (p) => { paused = p; } }; // dev inspection hook
 
   const clock = new THREE.Clock();
   const frame = () => {
@@ -123,10 +166,12 @@ async function main() {
     audio.setListenerYaw(rig.restYaw + rig.yaw);
     if (!paused) {
       os.update(dt);
+      finale.update(dt);
       shift.update(dt, rig.lookingAway);
     }
     os.draw();
-    pipeline.uniforms.uGlitch.value = (rig.lookingAway ? 0.15 + rig.awayAmount * 0.5 : 0) + dread.glitch;
+    pipeline.uniforms.uGlitch.value = (rig.lookingAway && !finale.active ? 0.15 + rig.awayAmount * 0.5 : 0)
+      + dread.glitch + finale.glitch;
     pipeline.render(room.scene, rig.camera, t);
     debug.textContent = `away: ${rig.lookingAway ? 'YES' : 'no'}  lapses: ${shift.lapses}  ` +
       `clock: ${shift.clockText()}  pay: ${shift.payText()}\nRMB hold = look around   Esc = pause`;

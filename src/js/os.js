@@ -87,6 +87,10 @@ export class WorkOS {
     this.drag = null;
     this.selectedIcon = null;
     this.lastIconClick = { id: null, t: -1 };
+    /** Round number shown by the BIOS. */
+    this.round = 13;
+    /** When true only open windows respond; desktop and taskbar are dead. */
+    this.lockdown = false;
     /** Called once when boot finishes and the desktop appears. */
     this.onReady = null;
   }
@@ -102,13 +106,13 @@ export class WorkOS {
   /**
    * Opens a program's window, or focuses it if already open.
    * @param {string} id program id
+   * @param {object} [app] an app to show directly instead of an installed program
    */
-  open(id) {
+  open(id, app = null) {
     const existing = this.windows.find((w) => w.id === id);
     if (existing) return this.focus(existing);
-    const p = this.programs.find((q) => q.id === id);
     const n = this.windows.length;
-    const app = p.create();
+    app ||= this.programs.find((q) => q.id === id).create();
     const win = { id, app, x: 20 + n * 10, y: 6 + n * 8, w: 284, h: 200, ...app.rect };
     this.windows.push(win);
     return win;
@@ -126,10 +130,6 @@ export class WorkOS {
   }
 
   /**
-   * Shows a modal dialog. Blocks other input until dismissed.
-   * @param {{title:string, lines:string[], button?:string, alert?:boolean, onClose?:Function}} d
-   */
-  /**
    * Cuts the picture to black for a moment. Input still works underneath.
    * @param {number} seconds
    */
@@ -137,6 +137,25 @@ export class WorkOS {
     this.blackoutLeft = Math.max(this.blackoutLeft || 0, seconds);
   }
 
+  /**
+   * Restarts the machine into the boot screen for a new round. Clears all
+   * windows and dialogs; does not restart the shift.
+   * @param {number} round round number shown by the BIOS
+   */
+  reboot(round) {
+    this.round = round;
+    this.state = 'boot';
+    this.bootTime = 0;
+    this.windows = [];
+    this.dialogs = [];
+    this.lockdown = false;
+    this.onReady = null;
+  }
+
+  /**
+   * Shows a modal dialog. Blocks other input until dismissed.
+   * @param {{title:string, lines:string[], button?:string, alert?:boolean, onClose?:Function}} d
+   */
   dialog(d) {
     this.dialogs.push({ button: 'OK', ...d });
     this.sfx.error();
@@ -176,13 +195,19 @@ export class WorkOS {
       const win = this.windows[i];
       if (!inside(x, y, win.x, win.y, win.w, win.h)) continue;
       this.focus(win);
-      if (inside(x, y, win.x + win.w - 14, win.y + 3, 11, 10)) return this.close(win);
-      if (y < win.y + 3 + TITLE_H) { this.drag = { win, ox: x - win.x, oy: y - win.y }; return; }
+      const closable = win.app.closable !== false && !this.lockdown;
+      if (closable && inside(x, y, win.x + win.w - 14, win.y + 3, 11, 10)) return this.close(win);
+      if (y < win.y + 3 + TITLE_H) {
+        if (!this.lockdown) this.drag = { win, ox: x - win.x, oy: y - win.y };
+        return;
+      }
       const r = this.clientRect(win);
       if (inside(x, y, r.x, r.y, r.w, r.h)) win.app.mouseDown?.(x - r.x, y - r.y);
       return;
     }
 
+    // Locked down: the desktop and taskbar no longer respond.
+    if (this.lockdown) return;
     if (y >= this.H - TASKBAR_H) return this.clickTaskbar(x);
 
     const icon = this.iconAt(x, y);
@@ -284,7 +309,7 @@ export class WorkOS {
       `Memory test ..... ${Math.min(131072, Math.floor(this.bootTime * 90000))}K`,
       this.bootTime > 1.5 ? 'Detecting operator ......... 1 found' : '',
       this.bootTime > 2.2 ? 'Loading WorkOS 2002 ...' : '',
-      this.bootTime > 3.0 ? 'Round: 13    Shift length: 13:00' : '',
+      this.bootTime > 3.0 ? `Round: ${this.round}    Shift length: 13:00` : '',
     ];
     lines.forEach((l, i) => c.fillText(l, 10, 20 + i * 13));
     if (Math.floor(this.time * 3) % 2 === 0) c.fillRect(10, 20 + lines.length * 13 - 9, 6, 10);
@@ -300,7 +325,7 @@ export class WorkOS {
     c.fillText('Productivity is Presence.', this.W / 2 + 24, 118);
     c.textAlign = 'left';
 
-    for (const ic of this.iconLayout()) this.drawIcon(c, ic);
+    if (!this.lockdown) for (const ic of this.iconLayout()) this.drawIcon(c, ic);
     for (const win of this.windows) this.drawWindow(c, win, win === this.windows[this.windows.length - 1]);
     this.drawTaskbar(c);
     for (const d of this.dialogs) this.drawDialog(c, d);
@@ -331,8 +356,10 @@ export class WorkOS {
     c.fillStyle = g; c.fillRect(win.x + 3, win.y + 3, win.w - 6, TITLE_H);
     c.fillStyle = '#fff'; c.font = FONT_BOLD;
     c.fillText(win.app.title, win.x + 6, win.y + 12);
-    bevel(c, win.x + win.w - 14, win.y + 4, 10, 9);
-    c.fillStyle = '#000'; c.font = FONT_BOLD; c.fillText('x', win.x + win.w - 11, win.y + 11);
+    if (win.app.closable !== false) {
+      bevel(c, win.x + win.w - 14, win.y + 4, 10, 9);
+      c.fillStyle = '#000'; c.font = FONT_BOLD; c.fillText('x', win.x + win.w - 11, win.y + 11);
+    }
 
     const r = this.clientRect(win);
     c.save();

@@ -39,6 +39,11 @@ export class Shift {
     this.running = true;
   }
 
+  /** Freezes the clock and pay for good (end of round). */
+  stop() {
+    this.running = false;
+  }
+
   /**
    * Advances the shift. Looking away drains the clock faster and costs pay.
    * @param {number} dt seconds of real time

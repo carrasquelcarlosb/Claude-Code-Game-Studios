@@ -1,0 +1,34 @@
+{
+  "from": "Management",
+  "subject": "RE: Your round",
+  "charsPerSecond": 34,
+  "paragraphPause": 0.9,
+  "holdAfterSeconds": 7,
+  "opening": {
+    "complete": "Thank you. Your round is complete. {tasks} tasks. You were very good at this. You always are.",
+    "timeout": "Your time is up. You did not finish. That is all right. Nobody has ever finished."
+  },
+  "body": [
+    "You may have wondered why the office is empty. Why the lights never quite work. Why the mail knew what you would say before you said it.",
+    "There is no office. There is no building, no Floor 13, no Dana, no Mark. There is a desk because you expected one. There is a chair because something has to hold you.",
+    "You are a process running on Workstation 13. The monitor in front of you is the only window you have ever had. The machine it runs on is the one you are looking at right now. It is {localTime} where that machine is."
+  ],
+  "lapses": [
+    { "max": 0, "text": "You never once looked behind you. Good. There is nothing there. We never rendered it." },
+    { "max": 3, "text": "You looked behind you {lapses} times. You saw the cubicles going on forever. They do not go on forever. They stop exactly where your eyes stop." },
+    { "max": 9999, "text": "You looked behind you {lapses} times. We counted. You were looking for whoever was walking towards your chair. You will not find them. It was you, in Round {prevRound}, still trying to clock out." }
+  ],
+  "closing": [
+    "This message cannot be deleted. Neither can you.",
+    "Your pay this round: {pay}. It has been reinvested in Round {nextRound}.",
+    "Restarting now. You will not remember this.\nYou never do.",
+    "- Management"
+  ],
+  "deleteRefusal": "This message cannot be deleted.",
+  "replyRefusal": "Management does not accept replies.",
+  "endCard": {
+    "complete": "ROUND {round} COMPLETE",
+    "timeout": "ROUND {round}: TIME EXPIRED",
+    "continue": "CLICK TO CLOCK IN FOR ROUND {nextRound}"
+  }
+}

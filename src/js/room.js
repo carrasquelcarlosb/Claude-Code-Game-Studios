@@ -32,12 +32,12 @@ const TEX = {
   desk: () => makeTexture(64, 32, (c, w, h) => {
     speckle(c, w, h, '#a69a82', 25, 5);
   }),
-  // The player's desk carries 12 carved tally marks: previous rounds.
-  playerDesk: () => makeTexture(64, 32, (c, w, h) => {
+  // The player's desk carries one carved tally mark per previous round.
+  playerDesk: (tallies) => makeTexture(64, 32, (c, w, h) => {
     speckle(c, w, h, '#a69a82', 25, 5);
     c.fillStyle = '#5d533f';
-    for (let i = 0; i < 12; i++) {
-      const group = Math.floor(i / 5), k = i % 5, x = 40 + group * 7 + k;
+    for (let i = 0; i < Math.min(tallies, 25); i++) {
+      const group = Math.floor(i / 5), k = i % 5, x = 28 + group * 7 + k;
       if (k === 4) c.fillRect(x - 4, 26, 6, 1); else c.fillRect(x, 23, 1, 6);
     }
   }),
@@ -83,11 +83,12 @@ function instancedPart(geometry, material, cells, offset, rotY = 0) {
  * Creates the full office scene.
  * @param {object} cfg tuning.json contents
  * @param {THREE.Texture} screenTexture live texture for the player's CRT
+ * @param {number} [tallies=12] tally marks carved in the desk (previous rounds)
  * @returns {{scene: THREE.Scene, screenMesh: THREE.Mesh, screenCenter: THREE.Vector3,
  *            fluorescent: THREE.PointLight, monitorLight: THREE.PointLight,
  *            overheadPanel: THREE.Mesh}}
  */
-export function buildRoom(cfg, screenTexture) {
+export function buildRoom(cfg, screenTexture, tallies = 12) {
   const snap = cfg.render.vertexSnap;
   const { gridRadius: R, cubicleSpacing: S, ceilingHeight: H } = cfg.room;
 
@@ -151,7 +152,7 @@ export function buildRoom(cfg, screenTexture) {
   box(2.0, 1.45, 0.06, partMat, 0, 0.725, -1.2, desk);
   box(0.06, 1.45, 1.6, partMat, -1.0, 0.725, -0.4, desk);
   box(0.06, 1.45, 1.6, partMat, 1.0, 0.725, -0.4, desk);
-  box(1.6, 0.04, 0.8, lambert(TEX.playerDesk(), snap), 0, 0.74, -0.75, desk);
+  box(1.6, 0.04, 0.8, lambert(TEX.playerDesk(tallies), snap), 0, 0.74, -0.75, desk);
   for (const [x, z] of [[-0.75, -0.4], [0.75, -0.4], [-0.75, -1.1], [0.75, -1.1]]) {
     box(0.04, 0.72, 0.04, beigeMat, x, 0.36, z, desk);
   }
