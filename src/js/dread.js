@@ -9,11 +9,16 @@ export class Dread {
    * @param {import('./audio.js').Ambience} deps.audio
    * @param {import('./os.js').WorkOS} deps.os CRT blackout
    * @param {{killFor:(s:number)=>void}} deps.lights overhead fluorescent
+   * @param {import('./feeds.js').Feeds} [deps.feeds] CRT reflection
+   * @param {ReturnType<import('./figure.js').createFigure>} [deps.figure] shown in the reflection
    */
-  constructor({ audio, os, lights }) {
+  constructor({ audio, os, lights, feeds, figure }) {
     this.audio = audio;
     this.os = os;
     this.lights = lights;
+    this.feeds = feeds;
+    this.figure = figure;
+    this.reflectLeft = 0;
     /** Extra glitch amount for the post pass, decays over time. */
     this.glitch = 0;
   }
@@ -25,6 +30,12 @@ export class Dread {
    */
   trigger(stage, repeats = 0) {
     if (stage.blackout) this.os.blackout(stage.blackout);
+    // A glimpse: the dark CRT glass reflects the room, and someone in it.
+    if (stage.reflection && this.feeds && !this.figure.userData.pose) {
+      this.figure.pose(stage.reflection);
+      this.feeds.reflect(stage.blackout || 1);
+      this.reflectLeft = stage.blackout || 1;
+    }
     if (stage.lightsOut) this.lights.killFor(stage.lightsOut);
     if (stage.glitch) this.glitch = Math.max(this.glitch, stage.glitch);
     const delay = stage.soundDelay || 0;
@@ -58,6 +69,7 @@ export class Dread {
   /** Decays transient effects. */
   update(dt) {
     this.glitch = Math.max(0, this.glitch - dt * 1.5);
+    if (this.reflectLeft > 0 && (this.reflectLeft -= dt) <= 0) this.figure.pose(null);
   }
 }
 

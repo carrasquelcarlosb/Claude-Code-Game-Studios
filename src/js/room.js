@@ -158,6 +158,19 @@ export function buildRoom(cfg, screenTexture, tallies = 12) {
     box(0.04, 0.72, 0.04, beigeMat, x, 0.36, z, desk);
   }
 
+  // The player's office chair. Nobody is ever seen sitting in it.
+  const fabric = lambert(null, snap, { color: '#3a3d42' });
+  const chrome = lambert(null, snap, { color: '#8a8c90' });
+  box(0.5, 0.08, 0.48, fabric, 0, 0.5, 0.12, desk);
+  box(0.46, 0.46, 0.07, fabric, 0, 0.82, 0.38, desk);
+  box(0.04, 0.24, 0.04, chrome, 0, 0.62, 0.4, desk);
+  box(0.05, 0.42, 0.05, chrome, 0, 0.25, 0.12, desk);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const leg = box(0.32, 0.03, 0.04, chrome, Math.cos(a) * 0.16, 0.05, 0.12 + Math.sin(a) * 0.16, desk);
+    leg.rotation.y = -a;
+  }
+
   // Chunky CRT: front bezel, tapered back, stand.
   const crt = new THREE.Group();
   crt.position.set(0, 0.76, -0.9);

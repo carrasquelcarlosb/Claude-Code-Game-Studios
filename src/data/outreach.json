@@ -5,7 +5,7 @@
   "wrongTitle": "Compliance Violation",
   "wrongLines": ["This decision violates Outreach Policy 13.", "Compliance has rated you accordingly.", "Review the audience."],
   "errorStages": [
-    { "errors": 1, "blackout": 0.5, "sound": "knock", "glitch": 0.8 },
+    { "errors": 1, "blackout": 1.4, "reflection": "aisle", "sound": "knock", "glitch": 0.6 },
     { "errors": 2, "lightsOut": 2.4, "sound": "chairCreak", "soundDelay": 0.7 },
     { "errors": 3, "repeat": true, "lightsOut": 2.0, "sound": "footsteps", "soundDelay": 0.4 }
   ],

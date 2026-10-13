@@ -14,6 +14,8 @@ import { Dread } from './dread.js';
 import { Finale } from './finale.js';
 import { Atmosphere } from './atmosphere.js';
 import { AmbientEvents } from './ambient-events.js';
+import { createFigure } from './figure.js';
+import { Feeds } from './feeds.js';
 
 const DATA_FILES = ['tuning', 'ledger', 'mail', 'outreach', 'finale', 'ui', 'ambience'];
 
@@ -45,6 +47,11 @@ async function main() {
   const screen = new CrtScreen();
   const room = buildRoom(cfg, screen.texture, round - 1);
   const rig = new CameraRig(cfg.camera, room.screenCenter);
+  // The figure lives in the room but is only drawn into the reflection and
+  // the webcam feed, until the end.
+  const figure = createFigure(cfg.render.vertexSnap);
+  room.scene.add(figure);
+  const feeds = new Feeds(renderer, room, figure, rig.camera.position, cfg.feeds);
   const audio = new Ambience(cfg.audio);
   const shift = new Shift(cfg.shift);
   const atmosphere = new Atmosphere(cfg.atmosphere, cfg.lighting, room);
@@ -53,9 +60,9 @@ async function main() {
     click: () => audio.mouseClick(),
     error: () => audio.errorChime(),
   });
-  const dread = new Dread({ audio, os, lights: atmosphere });
+  const dread = new Dread({ audio, os, lights: atmosphere, feeds, figure });
   const finale = new Finale(finaleData, {
-    os, shift, audio, round, lights: atmosphere,
+    os, shift, audio, round, lights: atmosphere, rig, feeds, figure, dread,
     onEnd: (sum) => showEndCard(sum),
   });
   const onDread = (stage, repeats = 0) => dread.trigger(stage, repeats);
@@ -163,7 +170,7 @@ async function main() {
     overlay.style.display = 'flex';
   };
 
-  if (DEBUG) window.__debug = { rig, room, os, shift, dread, finale, atmosphere, ambient, setPaused: (p) => { paused = p; } };
+  if (DEBUG) window.__debug = { rig, room, os, shift, dread, finale, atmosphere, ambient, feeds, figure, setPaused: (p) => { paused = p; } };
 
   // --- Frame loop -------------------------------------------------------------
   const clock = new THREE.Clock();
@@ -187,6 +194,7 @@ async function main() {
     os.draw();
     pipeline.uniforms.uGlitch.value = (rig.lookingAway && !finale.active ? 0.15 + rig.awayAmount * 0.5 : 0)
       + dread.glitch + finale.glitch;
+    feeds.update(dt);
     pipeline.render(room.scene, rig.camera, t);
     if (DEBUG) debug.textContent = `away: ${rig.lookingAway ? 'YES' : 'no'}  lapses: ${shift.lapses}  ` +
       `clock: ${shift.clockText()}  rating: ${shift.ratingText()}  gloom: ${atmosphere.gloom.toFixed(2)}\n` +

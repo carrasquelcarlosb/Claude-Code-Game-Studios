@@ -87,6 +87,8 @@ export class WorkOS {
     this.drag = null;
     this.selectedIcon = null;
     this.lastIconClick = { id: null, t: -1 };
+    /** Optional full-screen takeover: {draw(ctx, W, H)}. */
+    this.overlay = null;
     /** Round number shown by the BIOS. */
     this.round = 13;
     /** When true only open windows respond; desktop and taskbar are dead. */
@@ -321,6 +323,8 @@ export class WorkOS {
       c.fillStyle = 'rgba(200,230,255,0.5)'; c.fillRect(0, this.H / 2, this.W, 1);
     } else if (this.state === 'boot') this.drawBoot(c);
     else this.drawDesktop(c);
+    // A full-screen takeover (the scare) draws over everything.
+    if (this.overlay) this.overlay.draw(c, this.W, this.H);
     this.screen.present();
   }
 

@@ -269,6 +269,53 @@ export class Ambience {
     src.start(this.ctx.currentTime + delay);
   }
 
+  /** Cuts every sound to dead silence almost instantly (before the scare). */
+  silence() {
+    if (!this.ctx) return;
+    const g = this.master.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.04);
+  }
+
+  /**
+   * Brings the mix back after a silence, quieter than before.
+   * @param {number} level fraction of the normal master volume
+   * @param {number} seconds fade-in time
+   */
+  restore(level, seconds) {
+    if (!this.ctx) return;
+    const g = this.master.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(this.cfg.masterVolume * level, t + seconds);
+  }
+
+  /**
+   * The one scare: a sub drop, a raw scraping roar and a CRT squeal, all
+   * noise-based and distorted so nothing reads as a clean tone. Plays on its
+   * own path straight to the output, so it ignores silence().
+   */
+  scareSting() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, sr = ctx.sampleRate, len = Math.floor(sr * 2.2), d = new Float32Array(len);
+    let y1 = 0, y2 = 0, phase = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      const hit = Math.min(1, t / 0.006);
+      phase += 2 * Math.PI * (32 + 40 * Math.exp(-t * 3)) / sr;
+      const sub = Math.sin(phase) * Math.exp(-t * 1.6) * 1.1;
+      y1 += 0.35 * ((Math.random() * 2 - 1) - y1); // raw roar
+      const grit = 0.5 + 0.5 * Math.sin(2 * Math.PI * 31 * t + Math.sin(t * 90)); // rough, uneven
+      const roar = y1 * grit * Math.exp(-t * 1.8) * 1.6;
+      y2 += 0.9 * ((Math.random() * 2 - 1) - y2);
+      const squeal = y2 * Math.exp(-t * 3.5) * 0.35;
+      d[i] = Math.tanh((sub + roar + squeal) * hit * 2.2) * 0.9;
+    }
+    const buf = ctx.createBuffer(1, len, sr); buf.getChannelData(0).set(d);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const g = ctx.createGain(); g.gain.value = this.cfg.scareVolume;
+    src.connect(g).connect(ctx.destination);
+    src.start();
+  }
+
   /** Routes a node through a lowpass into a positioned panner; returns the filter input. */
   muffled(cutoff, pos, gain, bus) {
     const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cutoff;

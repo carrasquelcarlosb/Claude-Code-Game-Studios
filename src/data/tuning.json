@@ -44,6 +44,14 @@
     "bright": { "fog": "#cfd8cc", "fogNear": 6, "fogFar": 34, "ambient": 0.9, "fluorescent": 3.2 },
     "dark":   { "fog": "#0e1210", "fogNear": 2, "fogFar": 20, "ambient": 0.05, "fluorescent": 1.1 }
   },
+  "feeds": {
+    "reflectionSize": [160, 120],
+    "reflectionBrightness": 0.22,
+    "webcamSize": [160, 120],
+    "webcamFps": 8,
+    "webcamPos": [0, 1.24, -0.72],
+    "webcamLookAt": [0.15, 0.8, 3.0]
+  },
   "room": {
     "gridRadius": 7,
     "cubicleSpacing": 4.2,
@@ -66,6 +74,7 @@
     "uiVolume": 0.18,
     "dreadVolume": 0.9,
     "droneVolume": 0.14,
-    "ambientVolume": 0.8
+    "ambientVolume": 0.8,
+    "scareVolume": 0.7
   }
 }

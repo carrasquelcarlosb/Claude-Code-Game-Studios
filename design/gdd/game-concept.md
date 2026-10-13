@@ -273,6 +273,24 @@ Every action is judged by someone, and the judgement is public.
 
 *Design test*: When a choice is purely functional, give it a social rating.
 
+**Anti-pillar amendment (horror payoff)**: "NOT jump scares" becomes **"NOT
+cheap or frequent scares: exactly one, earned."** The dread now builds to a
+single scare at the climax of the finale:
+
+- **Foreshadowing:** on the first CRT blackout (4th Ledger error or 1st wrong
+  Outreach call), the dark glass reflects the office behind the player, with a
+  tall figure far down the aisle. Turning around shows nothing; the figure only
+  exists in reflections and on camera.
+- **Exit interview:** the reveal is now a rated chat with Management, one beat
+  at a time. A webcam on the monitor shows the player's chair, which is always
+  empty. The figure approaches across beats (aisle, two cubicles back, then
+  bent over the chair). Management lifts the look-away penalty ("It's free now")
+  to tempt the player to turn.
+- **The hit:** silence, every light dies, the face fills the CRT with the
+  sting, and the figure is now physically behind the chair. Turning around
+  meets its face at eye height.
+- A content note on the title screen: "Contains one sudden scare."
+
 **Visual Identity Anchor amendment**: the "slightly too clean" rule now opens
 the round literally, as bright and sterile. Darkness is earned through time and
 a falling rating, not given up front. Dread lights-out stings still go fully dark.
