@@ -28,7 +28,8 @@
   "fates": [
     { "min": 4.5, "text": "Five stars. Everyone loved you. You will be kept exactly as you are, forever. That is what a good rating is for." },
     { "min": 3.0, "text": "An acceptable score. You will be carried into Round {nextRound}. Try to be more pleasant." },
-    { "min": 0, "text": "Operators below three stars are not carried forward. You will be archived. Your replacement has a much better smile. Your replacement is you." }
+    { "min": 0, "text": "Operators below three stars are not carried forward. You will be archived. Your replacement has a much better smile. Your replacement is you." },
+    { "min": -9999, "text": "Negative stars. We did not know that was possible. You have been rated below nothing, and everyone saw it happen. You will not be archived. You will be kept, so that we can study you. Every round." }
   ],
   "deleteRefusal": "This message cannot be deleted.",
   "replyRefusal": "Management does not accept replies.",

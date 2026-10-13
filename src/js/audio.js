@@ -17,7 +17,8 @@ export class Ambience {
     this.master.gain.value = this.cfg.masterVolume;
     this.master.connect(ctx.destination);
 
-    // Room tone: brown noise, low-passed.
+    // Room tone: a low HVAC rumble, quiet. Brown noise kept well below 200 Hz
+    // so it reads as air in a building, not hiss.
     const len = ctx.sampleRate * 4;
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -29,7 +30,7 @@ export class Ambience {
     const noise = ctx.createBufferSource();
     noise.buffer = buf; noise.loop = true;
     const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass'; lp.frequency.value = 380;
+    lp.type = 'lowpass'; lp.frequency.value = 160;
     const toneGain = ctx.createGain(); toneGain.gain.value = this.cfg.roomToneVolume;
     noise.connect(lp).connect(toneGain).connect(this.master);
     noise.start();
@@ -251,7 +252,8 @@ export class Ambience {
     const p = this.ctx.createPanner();
     p.panningModel = 'HRTF';
     p.distanceModel = 'inverse';
-    p.refDistance = 0.8;
+    p.refDistance = 1.2;
+    p.rolloffFactor = 0.8;
     p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z;
     const g = this.ctx.createGain(); g.gain.value = gain * bus;
     p.connect(g).connect(this.master);
@@ -267,20 +269,45 @@ export class Ambience {
     src.start(this.ctx.currentTime + delay);
   }
 
-  /** CRT power-cut thunk followed by a wobbling degauss hum. */
-  degauss() {
+  /** Routes a node through a lowpass into a positioned panner; returns the filter input. */
+  muffled(cutoff, pos, gain, bus) {
+    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cutoff;
+    lp.connect(this.spatial(...pos, gain, bus));
+    return lp;
+  }
+
+  /** The CRT losing its picture: a soft low thump with a little static. No pitch sweep. */
+  crtThunk() {
     if (!this.ctx) return;
-    const sr = this.ctx.sampleRate, len = Math.floor(sr * 1.4), d = new Float32Array(len);
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.35), d = new Float32Array(len);
+    let y = 0;
     for (let i = 0; i < len; i++) {
       const t = i / sr;
-      const thunk = (Math.random() * 2 - 1) * Math.exp(-t * 40) * 0.9;
-      const hum = Math.sin(2 * Math.PI * (70 - 25 * t) * t) * Math.exp(-t * 2.5) * (0.6 + 0.4 * Math.sin(t * 38));
-      d[i] = thunk + hum * 0.7;
+      y += 0.08 * ((Math.random() * 2 - 1) - y); // one-pole lowpass: soft crackle, not hiss
+      d[i] = Math.sin(2 * Math.PI * 55 * t) * Math.exp(-t * 14) * 0.7 + y * 2 * Math.exp(-t * 60);
     }
-    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
-    const g = this.ctx.createGain(); g.gain.value = this.cfg.dreadVolume;
-    lp.connect(g).connect(this.master);
-    this.playBuffer(d, lp);
+    this.playBuffer(d, this.muffled(900, [0, 1.05, -0.7], 0.8));
+  }
+
+  /**
+   * Knuckles rapping on the fabric partition at a position: dull, close taps.
+   * @param {number[]} pos [x, y, z]
+   * @param {number} [count] number of knocks
+   */
+  knock(pos, count = 2, delay = 0) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.12);
+    for (let n = 0; n < count; n++) {
+      const d = new Float32Array(len);
+      let y = 0;
+      for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        const env = Math.min(1, t / 0.002) * Math.exp(-t * 45);
+        y += 0.12 * ((Math.random() * 2 - 1) - y);
+        d[i] = (Math.sin(2 * Math.PI * 190 * t) * 0.6 + Math.sin(2 * Math.PI * 120 * t) * 0.4 + y * 1.5) * env;
+      }
+      this.playBuffer(d, this.muffled(1600, pos, 1.0), delay + n * 0.2);
+    }
   }
 
   /**
@@ -311,18 +338,22 @@ export class Ambience {
    */
   footsteps(from, to, steps = 4, interval = 0.55, delay = 0) {
     if (!this.ctx) return;
-    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.18);
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.25);
     for (let s = 0; s < steps; s++) {
       const k = steps === 1 ? 1 : s / (steps - 1);
       const pos = from.map((v, i) => v + (to[i] - v) * k);
       const d = new Float32Array(len);
-      let last = 0;
+      let y = 0;
+      const heel = 75 + Math.random() * 15;
       for (let i = 0; i < len; i++) {
         const t = i / sr;
-        last = (last + 0.25 * (Math.random() * 2 - 1)) / 1.25; // muffled carpet thud
-        d[i] = last * Math.exp(-t * 30) * 2.2 + (t > 0.05 ? (Math.random() * 2 - 1) * Math.exp(-(t - 0.05) * 90) * 0.25 : 0);
+        // Soft heel thud plus a dull carpet scuff; slow attack, no click.
+        const env = Math.min(1, t / 0.008) * Math.exp(-t * 22);
+        y += 0.04 * ((Math.random() * 2 - 1) - y);
+        const roll = t > 0.06 ? Math.exp(-(t - 0.06) * 30) * 0.5 : 0; // toe rolling down
+        d[i] = Math.sin(2 * Math.PI * heel * t) * env * 0.7 + y * 3 * (env + roll);
       }
-      this.playBuffer(d, this.spatial(...pos, 1.4), delay + s * interval);
+      this.playBuffer(d, this.muffled(450, pos, 0.75), delay + s * interval);
     }
   }
 

@@ -44,7 +44,7 @@ export function createOutreach(data, { shift, os, onComplete, onError }) {
       return;
     }
     if (choice !== it.decision) {
-      shift.rate(-shift.cfg.wrongDecisionPenalty, 'Compliance', 1);
+      shift.mistake('Compliance', shift.cfg.wrongDecisionPenalty);
       errors++;
       const stage = stageFor(data.errorStages, errors);
       if (stage) onError?.(stage, errors - stage.errors);

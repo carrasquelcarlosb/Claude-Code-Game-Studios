@@ -9,7 +9,7 @@ export class Shift {
     this.cfg = cfg;
     /** Seconds left on the clock. */
     this.remaining = cfg.durationSec;
-    /** Current star rating, clamped to [minRating, maxRating]. */
+    /** Current star rating, clamped to [minRating, maxRating]; can go negative. */
     this.rating = cfg.startingRating;
     /** Number of separate times the player looked away. */
     this.lapses = 0;
@@ -19,6 +19,8 @@ export class Shift {
     this.running = false;
     this.away = false;
     this.lapseRatingStart = 0;
+    /** Mistakes in a row since the last completed task; each one costs more. */
+    this.mistakeStreak = 0;
     this.listeners = {};
   }
 
@@ -99,13 +101,24 @@ export class Shift {
    */
   completeTask(delta = this.cfg.ratingPerTask, by, stars) {
     this.tasksDone++;
+    this.mistakeStreak = 0;
     this.rate(delta, by, stars);
     this.emit('task');
   }
 
-  /** Records a mistake: a fixed rating penalty with a notice. */
-  mistake(by) {
-    this.rate(-this.cfg.mistakePenalty, by, 1);
+  /**
+   * Records a mistake. Consecutive mistakes escalate:
+   * cost = base * (1 + (streak - 1) * mistakeStreakGrowth), so with base 0.13
+   * and growth 1 the run costs 0.13, 0.26, 0.39, ... A completed task resets it.
+   * @param {string} by who rated it
+   * @param {number} [base] first-mistake cost; defaults to `mistakePenalty`
+   * @returns {number} stars lost
+   */
+  mistake(by, base = this.cfg.mistakePenalty) {
+    this.mistakeStreak++;
+    const cost = base * (1 + (this.mistakeStreak - 1) * this.cfg.mistakeStreakGrowth);
+    this.rate(-cost, by, 1);
+    return cost;
   }
 
   /** @returns {string} remaining time as MM:SS */

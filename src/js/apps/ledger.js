@@ -42,6 +42,7 @@ export function createLedger(data, { shift, os, sfx, onComplete, onError }) {
   };
 
   const commit = () => {
+    if (!typed) return; // an empty Enter is a slip, not an attempt
     const r = rows[current];
     const ok = r.acceptAny ? typed.length === length : typed === r.code;
     if (!ok) {

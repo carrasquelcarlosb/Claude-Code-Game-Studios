@@ -97,7 +97,8 @@ async function main() {
 
   // --- Shift events ---------------------------------------------------------
   shift.on('timeout', () => finale.start('timeout'));
-  shift.on('rated', ({ by, stars, delta }) => os.toast(`${by} rated you ${starString(stars)}`, delta >= 0));
+  shift.on('rated', ({ by, stars, delta }) => os.toast(
+    `${by} rated you ${starString(stars)}  ${delta >= 0 ? '+' : '-'}${Math.abs(delta).toFixed(2)}`, delta >= 0));
   shift.on('lapseEnd', ({ lapse, cost }) => {
     os.dialog({
       title: `Attention Lapse #${lapse}`, alert: true,

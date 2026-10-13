@@ -33,8 +33,11 @@ export class Dread {
         // Someone typing in the cubicle directly behind the player.
         setTimeout(() => this.audio.distantTyping([0.4, 0.8, 4.0], 5), delay * 1000);
         break;
-      case 'degauss':
-        this.audio.degauss();
+      case 'knock':
+        // The picture drops with a soft thump, then someone taps twice on
+        // the partition just to the player's left.
+        this.audio.crtThunk();
+        this.audio.knock([-1.0, 0.95, -0.3], 2, 0.6 + delay);
         break;
       case 'chairCreak':
         // An empty chair in the cubicle behind and to the left.
