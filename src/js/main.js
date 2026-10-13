@@ -215,4 +215,19 @@ async function main() {
   frame();
 }
 
-main();
+// If the game cannot start (no WebGL, a data file failed to load), say so on
+// the title screen instead of leaving a black page.
+main().catch((err) => {
+  console.error(err);
+  const overlay = document.getElementById('start');
+  overlay.innerHTML = '';
+  for (const text of ['WORKSTATION 13 FAILED TO START', String(err && err.message ? err.message : err),
+    'This game needs WebGL in a modern desktop browser (Chrome, Firefox or Edge).']) {
+    const p = document.createElement('div');
+    p.textContent = text;
+    p.style.margin = '6px 0';
+    overlay.appendChild(p);
+  }
+  overlay.style.display = 'flex';
+  overlay.style.cursor = 'default';
+});

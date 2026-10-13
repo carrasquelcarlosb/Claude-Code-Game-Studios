@@ -1,8 +1,9 @@
 # Minimal static file server for the ROUND 13 browser build.
-# Usage: powershell -ExecutionPolicy Bypass -File tools/serve.ps1 [-Port 8013]
-param([int]$Port = 8013)
+# Usage: powershell -ExecutionPolicy Bypass -File tools/serve.ps1 [-Port 8013] [-Root src]
+#   -Root dist/round13 serves the release build made by tools/build.ps1.
+param([int]$Port = 8013, [string]$Root = 'src')
 
-$root = Join-Path $PSScriptRoot '..\src' | Resolve-Path
+$root = Join-Path (Join-Path $PSScriptRoot '..') $Root | Resolve-Path
 $mime = @{
   '.html' = 'text/html; charset=utf-8'; '.js' = 'text/javascript; charset=utf-8'
   '.json' = 'application/json'; '.css' = 'text/css'; '.png' = 'image/png'
