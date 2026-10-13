@@ -1,0 +1,72 @@
+{
+  "_style": "Show, don't tell. Management never explains. Every revelation is something the player sees or works out: the notes, the handwriting, the empty chair, the real clock.",
+  "from": "Management",
+  "title": "Management - Exit Interview",
+  "webcamTitle": "Photo for your file",
+  "charsPerSecond": 30,
+  "typingSeconds": 1.6,
+  "pauseAfterMessage": 0.8,
+  "opening": {
+    "complete": "Your round is complete. Thank you. You were very good at this. You always are.",
+    "timeout": "Time."
+  },
+  "script": [
+    { "say": "{opening}" },
+    { "say": "Before you go, a short exit interview. Your answers will be rated." },
+    { "ask": "How was your shift?",
+      "options": ["Wonderful! Thank you so much!", "It was fine.", "Something is wrong here."],
+      "stars": [5, 3, 1],
+      "answers": ["We know. We were watching.", "Fine is a three-star word.", "Yes."] },
+    { "ask": "How many rounds have you worked here?",
+      "options": ["This is my first.", "I don't remember.", "Thirteen."],
+      "stars": [1, 3, 5],
+      "answer": "Count the notes beside your screen. You may look away. It no longer costs anything." },
+    { "waitLook": true, "timeout": 14 },
+    { "say": "{notes}." },
+    { "ask": "Whose handwriting is that?",
+      "options": ["The previous operator's.", "I don't know.", "Mine?"],
+      "stars": [3, 1, 5],
+      "answer": "smile :)\n        -R{round}" },
+    { "say": "Leave that one for the next shift." },
+    { "say": "Smile. We need a photo for your file." },
+    { "webcam": true },
+    { "wait": 4 },
+    { "say": "Hold still." },
+    { "figure": "aisle" },
+    { "wait": 3 },
+    { "ask": "Do you see who is standing behind you?",
+      "options": ["No one is there.", "Who is that?", "I'm not turning around."],
+      "stars": [3, 1, 5],
+      "answers": ["Turn around and check. It's free now.", "Turn around and check. It's free now.", "Good. Keep smiling."] },
+    { "waitLook": true, "timeout": 9 },
+    { "figure": "near", "sound": "footsteps" },
+    { "sayByLapses": [
+        { "max": 0, "text": "You didn't look once tonight. Good." },
+        { "max": 9999, "text": "You looked {lapses} times tonight." }
+      ] },
+    { "ask": "Where do you think you are?",
+      "options": ["At my desk.", "Holloway Data Solutions.", "I don't know anymore."],
+      "stars": [3, 4, 1],
+      "answer": "It is {localTime} where you are sitting." },
+    { "say": "One last photo." },
+    { "figure": "behind" },
+    { "wait": 2.8 },
+    { "scare": true },
+    { "say": "★ {rating}." },
+    { "say": "{fate}" },
+    { "say": "See you at 13:00." },
+    { "wait": 3 },
+    { "reboot": true }
+  ],
+  "fates": [
+    { "min": 4.5, "text": "Five stars. Stay exactly as you are." },
+    { "min": 3.0, "text": "Acceptable. Smile more next time." },
+    { "min": 0, "text": "Below three stars. Your replacement has been told which chair is theirs." },
+    { "min": -9999, "text": "Negative stars. Nobody has done that before. Stay where we can see you." }
+  ],
+  "endCard": {
+    "complete": "ROUND {round} COMPLETE",
+    "timeout": "ROUND {round}: TIME EXPIRED",
+    "continue": "CLICK TO CLOCK IN FOR ROUND {nextRound}"
+  }
+}

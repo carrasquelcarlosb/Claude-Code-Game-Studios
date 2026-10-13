@@ -1,0 +1,254 @@
+import * as THREE from 'three';
+import { ps2ify, makeTexture } from './ps2.js';
+
+/**
+ * Builds the liminal office: the player's desk and CRT, plus an endless-looking
+ * grid of identical empty cubicles fading into fog.
+ */
+
+// --- Procedural textures -------------------------------------------------
+
+function speckle(ctx, w, h, base, spread, seed = 1) {
+  let s = seed;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  ctx.fillStyle = base; ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < w * h * 0.6; i++) {
+    const v = Math.floor((rnd() - 0.5) * spread);
+    ctx.fillStyle = `rgba(${v > 0 ? 255 : 0},${v > 0 ? 255 : 0},${v > 0 ? 255 : 0},${Math.abs(v) / 255})`;
+    ctx.fillRect(Math.floor(rnd() * w), Math.floor(rnd() * h), 1, 1);
+  }
+}
+
+const TEX = {
+  carpet: () => makeTexture(32, 32, (c, w, h) => speckle(c, w, h, '#3f6a4c', 60, 7)),
+  ceiling: () => makeTexture(32, 32, (c, w, h) => {
+    speckle(c, w, h, '#b8b5a4', 30, 3);
+    c.fillStyle = '#7d7a6c'; c.fillRect(0, 0, w, 1); c.fillRect(0, 0, 1, h);
+  }),
+  partition: () => makeTexture(16, 32, (c, w, h) => {
+    speckle(c, w, h, '#c9ccc0', 30, 11);
+    c.fillStyle = '#9da196'; c.fillRect(0, 0, w, 2);
+  }),
+  desk: () => makeTexture(64, 32, (c, w, h) => {
+    speckle(c, w, h, '#a69a82', 25, 5);
+  }),
+  // A sticky note signed by a past operator: "smile :)" and their round.
+  note: (color, round) => makeTexture(32, 32, (c, w, h) => {
+    c.fillStyle = color; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(0,0,0,0.08)'; c.fillRect(0, 0, w, 4);
+    c.fillStyle = '#26307a';
+    c.font = 'bold 8px "Comic Sans MS", sans-serif'; c.fillText('smile :)', 2, 12);
+    c.font = 'bold 12px "Comic Sans MS", sans-serif'; c.fillText(`-R${round}`, 4, 27);
+  }),
+  beige: () => makeTexture(16, 16, (c, w, h) => speckle(c, w, h, '#c9c2a8', 18, 9)),
+  keys: () => makeTexture(64, 16, (c, w, h) => {
+    c.fillStyle = '#b9b29a'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#d8d2bb';
+    for (let y = 1; y < h - 2; y += 3) for (let x = 1; x < w - 2; x += 3) c.fillRect(x, y, 2, 2);
+  }),
+};
+
+// --- Geometry helpers ----------------------------------------------------
+
+function lambert(map, snap, extra = {}) {
+  return ps2ify(new THREE.MeshLambertMaterial({ map, ...extra }), snap);
+}
+
+function box(w, h, d, mat, x, y, z, parent) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+
+/**
+ * Adds one instance per cubicle cell for a given part, offset within the cell.
+ * @returns {THREE.InstancedMesh}
+ */
+function instancedPart(geometry, material, cells, offset, rotY = 0) {
+  const mesh = new THREE.InstancedMesh(geometry, material, cells.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1);
+  q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+  cells.forEach((c, i) => {
+    m.compose(new THREE.Vector3(c.x + offset.x, offset.y, c.z + offset.z), q, s);
+    mesh.setMatrixAt(i, m);
+  });
+  return mesh;
+}
+
+// --- Public API -----------------------------------------------------------
+
+/**
+ * Creates the full office scene.
+ * @param {object} cfg tuning.json contents
+ * @param {THREE.Texture} screenTexture live texture for the player's CRT
+ * @param {number} [notes=12] sticky notes beside the monitor, one per previous round
+ * @returns {{scene: THREE.Scene, screenMesh: THREE.Mesh, screenCenter: THREE.Vector3,
+ *            fluorescent: THREE.PointLight, monitorLight: THREE.PointLight,
+ *            panels: THREE.InstancedMesh, ambient: THREE.AmbientLight}}
+ */
+export function buildRoom(cfg, screenTexture, notes = 12) {
+  const snap = cfg.render.vertexSnap;
+  const { gridRadius: R, cubicleSpacing: S, ceilingHeight: H } = cfg.room;
+
+  const scene = new THREE.Scene();
+  const fogColor = new THREE.Color('#141a16');
+  scene.background = fogColor;
+  scene.fog = new THREE.Fog(fogColor, cfg.room.fogNear, cfg.room.fogFar);
+
+  const ambient = new THREE.AmbientLight('#dfe6d6', cfg.lighting.ambientIntensity);
+  scene.add(ambient);
+
+  // Floor and ceiling span the whole grid.
+  const span = (R * 2 + 3) * S;
+  const carpet = TEX.carpet(); carpet.repeat.set(span / 1.2, span / 1.2);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(span, span, 24, 24), lambert(carpet, snap));
+  floor.rotation.x = -Math.PI / 2;
+  scene.add(floor);
+
+  const tiles = TEX.ceiling(); tiles.repeat.set(span / 0.6, span / 0.6);
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(span, span, 24, 24), lambert(tiles, snap));
+  ceiling.rotation.x = Math.PI / 2; ceiling.position.y = H;
+  scene.add(ceiling);
+
+  // Cubicle grid. Cell (0,0) is the player's and is built by hand below.
+  const cells = [];
+  for (let gx = -R; gx <= R; gx++) for (let gz = -R; gz <= R; gz++) {
+    if (gx === 0 && gz === 0) continue;
+    cells.push({ x: gx * S, z: gz * S });
+  }
+  const partMat = lambert(TEX.partition(), snap);
+  const deskMat = lambert(TEX.desk(), snap);
+  const beigeMat = lambert(TEX.beige(), snap);
+  const deadScreen = ps2ify(new THREE.MeshLambertMaterial({ color: '#0d110f' }), snap);
+
+  const wallFront = new THREE.BoxGeometry(2.0, 1.45, 0.06);
+  const wallSide = new THREE.BoxGeometry(0.06, 1.45, 1.6);
+  const deskTop = new THREE.BoxGeometry(1.6, 0.04, 0.8);
+  const crtBody = new THREE.BoxGeometry(0.42, 0.38, 0.42);
+  const crtFace = new THREE.PlaneGeometry(0.32, 0.24);
+
+  scene.add(instancedPart(wallFront, partMat, cells, { x: 0, y: 0.725, z: -1.2 }));
+  scene.add(instancedPart(wallSide, partMat, cells, { x: -1.0, y: 0.725, z: -0.4 }));
+  scene.add(instancedPart(wallSide, partMat, cells, { x: 1.0, y: 0.725, z: -0.4 }));
+  scene.add(instancedPart(deskTop, deskMat, cells, { x: 0, y: 0.74, z: -0.75 }));
+  scene.add(instancedPart(crtBody, beigeMat, cells, { x: 0, y: 0.97, z: -0.92 }));
+  scene.add(instancedPart(crtFace, deadScreen, cells, { x: 0, y: 0.98, z: -0.705 }));
+
+  // Ceiling light panels on every cell; all emissive, only one real light.
+  const panelGeo = new THREE.BoxGeometry(1.2, 0.03, 0.6);
+  const panelMat = new THREE.MeshBasicMaterial({ color: '#e9f2dc' });
+  const panelCells = [...cells, { x: 0, z: 0 }];
+  const panels = instancedPart(panelGeo, panelMat, panelCells, { x: 0, y: H - 0.02, z: -0.4 });
+  // Per-panel colour so lights can go out one by one.
+  panelCells.forEach((_, i) => panels.setColorAt(i, new THREE.Color(1, 1, 1)));
+  panels.userData.cells = panelCells;
+  scene.add(panels);
+
+  // Occasional structural columns break up the repetition.
+  const colGeo = new THREE.BoxGeometry(0.5, H, 0.5);
+  const colCells = cells.filter((c) => (Math.round(c.x / S) % 3 === 0) && (Math.round(c.z / S) % 3 === 0));
+  scene.add(instancedPart(colGeo, partMat, colCells, { x: S / 2, y: H / 2, z: S / 2 }));
+
+  // --- The player's cubicle -------------------------------------------------
+  const desk = new THREE.Group();
+  scene.add(desk);
+  box(2.0, 1.45, 0.06, partMat, 0, 0.725, -1.2, desk);
+  box(0.06, 1.45, 1.6, partMat, -1.0, 0.725, -0.4, desk);
+  box(0.06, 1.45, 1.6, partMat, 1.0, 0.725, -0.4, desk);
+  box(1.6, 0.04, 0.8, deskMat, 0, 0.74, -0.75, desk);
+  for (const [x, z] of [[-0.75, -0.4], [0.75, -0.4], [-0.75, -1.1], [0.75, -1.1]]) {
+    box(0.04, 0.72, 0.04, beigeMat, x, 0.36, z, desk);
+  }
+
+  // The player's office chair. Nobody is ever seen sitting in it.
+  const fabric = lambert(null, snap, { color: '#3a3d42' });
+  const chrome = lambert(null, snap, { color: '#8a8c90' });
+  box(0.5, 0.08, 0.48, fabric, 0, 0.5, 0.12, desk);
+  box(0.46, 0.46, 0.07, fabric, 0, 0.82, 0.38, desk);
+  box(0.04, 0.24, 0.04, chrome, 0, 0.62, 0.4, desk);
+  box(0.05, 0.42, 0.05, chrome, 0, 0.25, 0.12, desk);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const leg = box(0.32, 0.03, 0.04, chrome, Math.cos(a) * 0.16, 0.05, 0.12 + Math.sin(a) * 0.16, desk);
+    leg.rotation.y = -a;
+  }
+
+  // Chunky CRT: front bezel, tapered back, stand.
+  const crt = new THREE.Group();
+  crt.position.set(0, 0.76, -0.9);
+  desk.add(crt);
+  box(0.46, 0.4, 0.12, beigeMat, 0, 0.32, 0.18, crt);
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.24, 0.34, 4, 1), beigeMat);
+  back.rotation.set(Math.PI / 2, Math.PI / 4, 0);
+  back.position.set(0, 0.31, -0.05);
+  crt.add(back);
+  box(0.24, 0.05, 0.22, beigeMat, 0, 0.025, 0.05, crt);
+  box(0.08, 0.08, 0.08, beigeMat, 0, 0.09, 0.05, crt);
+
+  const screenMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.36, 0.27),
+    new THREE.MeshBasicMaterial({ map: screenTexture, fog: false }),
+  );
+  screenMesh.position.set(0, 0.32, 0.241);
+  crt.add(screenMesh);
+
+  // Keyboard, mouse and mug.
+  box(0.46, 0.03, 0.16, lambert(TEX.keys(), snap), 0, 0.775, -0.5, desk);
+  box(0.06, 0.03, 0.1, beigeMat, 0.36, 0.775, -0.5, desk);
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.1, 6), lambert(null, snap, { color: '#e5e0d0' }));
+  mug.position.set(-0.5, 0.81, -0.6);
+  desk.add(mug);
+  // One sticky note per previous round, each signed by that round's operator.
+  const noteColors = ['#e8e27a', '#e8e27a', '#f0b8c8', '#e8e27a'];
+  for (let i = 0; i < Math.min(notes, 20); i++) {
+    const tex = TEX.note(noteColors[i % 4], i + 1);
+    const note = new THREE.Mesh(new THREE.PlaneGeometry(0.095, 0.095),
+      lambert(tex, snap, { side: THREE.DoubleSide }));
+    const col = i % 4, row = Math.floor(i / 4);
+    note.position.set(-0.86 + col * 0.105, 1.3 - row * 0.105, -1.165); // clear of the monitor
+    note.rotation.z = ((i * 37) % 7 - 3) * 0.03;
+    desk.add(note);
+  }
+
+  // Lights: one flickering tube overhead, one harsh monitor glow.
+  const fluorescent = new THREE.PointLight('#e2f0d4', cfg.lighting.fluorescentIntensity, 9, 1.2);
+  fluorescent.position.set(0, H - 0.1, -0.4);
+  scene.add(fluorescent);
+  const monitorLight = new THREE.PointLight('#8fd8e8', cfg.lighting.monitorIntensity, 2.6, 1.5);
+  monitorLight.position.set(0, 1.0, -0.2);
+  scene.add(monitorLight);
+
+  const screenCenter = new THREE.Vector3();
+  screenMesh.getWorldPosition(screenCenter);
+  scene.updateMatrixWorld(true);
+  screenMesh.getWorldPosition(screenCenter);
+
+  return { scene, screenMesh, screenCenter, fluorescent, monitorLight, panels, ambient, buildChairs: (positions) => buildChairs(scene, snap, positions) };
+}
+
+/**
+ * Abandoned office chairs standing in the aisles. Seat and back are separate
+ * instanced meshes so each chair can be turned independently.
+ * @param {THREE.Scene} scene
+ * @param {number[]} snap vertex snap grid
+ * @param {number[][]} positions [x, z] per chair
+ * @returns {{count:number, positions:number[][], setYaw:(i:number, yaw:number)=>void, commit:()=>void}}
+ */
+function buildChairs(scene, snap, positions) {
+  const fabric = lambert(null, snap, { color: '#7c8088' }); // lighter than the player's, so silhouettes read
+  const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.5, 0.48), fabric, positions.length);
+  const back = new THREE.InstancedMesh(new THREE.BoxGeometry(0.46, 0.46, 0.07), fabric, positions.length);
+  scene.add(seat, back);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
+  const setYaw = (i, yaw) => {
+    const [x, z] = positions[i];
+    q.setFromAxisAngle(up, yaw);
+    // Seat block (pole + cushion) from the floor; back panel behind the sitter.
+    m.compose(new THREE.Vector3(x, 0.27, z), q, one); seat.setMatrixAt(i, m);
+    const bx = Math.sin(yaw) * 0.26, bz = Math.cos(yaw) * 0.26;
+    m.compose(new THREE.Vector3(x + bx, 0.75, z + bz), q, one); back.setMatrixAt(i, m);
+  };
+  const commit = () => { seat.instanceMatrix.needsUpdate = true; back.instanceMatrix.needsUpdate = true; };
+  return { count: positions.length, positions, setYaw, commit };
+}

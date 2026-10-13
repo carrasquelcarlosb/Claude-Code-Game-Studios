@@ -1,0 +1,80 @@
+{
+  "render": {
+    "width": 640,
+    "height": 480,
+    "vertexSnap": [320, 240],
+    "colorLevels": 32,
+    "ditherStrength": 1.0
+  },
+  "camera": {
+    "eyeHeight": 1.18,
+    "workFov": 36,
+    "lookFov": 64,
+    "maxYawDeg": 170,
+    "maxPitchDeg": 55,
+    "lookSensitivity": 0.0035,
+    "returnSpeed": 3.2,
+    "lookSmoothing": 14,
+    "lookAwayThresholdDeg": 32
+  },
+  "input": {
+    "cursorSpeed": 0.55
+  },
+  "shift": {
+    "durationSec": 780,
+    "startingRating": 3.13,
+    "minRating": -13,
+    "maxRating": 5,
+    "ratingPerTask": 0.03,
+    "mistakePenalty": 0.13,
+    "mistakeStreakGrowth": 1,
+    "wrongDecisionPenalty": 0.13,
+    "replyStarWeight": 0.06,
+    "awayTimeMultiplier": 2,
+    "awayPenaltyPerSec": 0.04
+  },
+  "os": {
+    "bootSeconds": 4,
+    "toastSeconds": 2.6
+  },
+  "atmosphere": {
+    "progressWeight": 0.75,
+    "darkExposure": 0.45,
+    "ratingWeight": 0.35,
+    "bright": { "fog": "#cfd8cc", "fogNear": 6, "fogFar": 34, "ambient": 0.9, "fluorescent": 3.2 },
+    "dark":   { "fog": "#0e1210", "fogNear": 2, "fogFar": 20, "ambient": 0.05, "fluorescent": 1.1 }
+  },
+  "feeds": {
+    "reflectionSize": [160, 120],
+    "reflectionBrightness": 0.22,
+    "webcamSize": [160, 120],
+    "webcamFps": 8,
+    "webcamPos": [0, 1.24, -0.72],
+    "webcamLookAt": [0.15, 0.8, 3.0]
+  },
+  "room": {
+    "gridRadius": 7,
+    "cubicleSpacing": 4.2,
+    "ceilingHeight": 2.8,
+    "fogNear": 3,
+    "fogFar": 26
+  },
+  "lighting": {
+    "fluorescentIntensity": 2.2,
+    "flickerChancePerSecond": 0.35,
+    "monitorIntensity": 0.5,
+    "ambientIntensity": 0.12
+  },
+  "audio": {
+    "masterVolume": 0.5,
+    "roomToneVolume": 0.12,
+    "humVolume": 0.08,
+    "crtWhineVolume": 0.005,
+    "keyVolume": 0.55,
+    "uiVolume": 0.18,
+    "dreadVolume": 0.9,
+    "droneVolume": 0.14,
+    "ambientVolume": 0.8,
+    "scareVolume": 0.7
+  }
+}
