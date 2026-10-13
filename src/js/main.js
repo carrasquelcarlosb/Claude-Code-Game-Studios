@@ -186,10 +186,13 @@ async function main() {
     if (!paused) {
       os.update(dt);
       finale.update(dt);
+      // Chairs keep misbehaving through the finale, where they gather behind the player.
+      haunt.finale = finale.active;
+      haunt.updateChairs(shift.progress, rig.lookingAway);
       shift.update(dt, rig.lookingAway);
       if (shift.running) {
         ambient.update(shift.progress * cfg.shift.durationSec, rig.lookingAway);
-        haunt.update(shift.progress, rig.lookingAway);
+        haunt.update(shift.progress);
       }
     }
     // Mood: bright and sterile at clock-in, draining with time and rating.

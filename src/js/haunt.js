@@ -34,16 +34,35 @@ export class Haunt {
     this.lastBand = Infinity;
     this.darkness = 0;
 
-    // Chairs: scattered at random angles; each has its own moment to turn.
-    this.chairs = room.buildChairs(data.chairs.positions);
+    // Chairs: every one starts in its right place, facing its own desk.
+    const C = data.chairs;
+    this.chairs = room.buildChairs(C.homes.length);
     let seed = 13;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    this.chairState = data.chairs.positions.map(([x, z], i) => {
-      const yaw = rnd() * Math.PI * 2;
-      this.chairs.setYaw(i, yaw);
-      return { yaw, facing: Math.atan2(x, z), threshold: rnd(), turned: false };
+    const deg = Math.PI / 180;
+    const arc = C.gather.arcDeg * deg;
+    this.chairState = C.homes.map(([x, z], i) => {
+      // Where this chair ends up: a slot in a two-row semicircle behind the
+      // player's chair (+Z is behind), facing the player.
+      const row = i % C.gather.radii.length;
+      const perRow = Math.ceil(C.homes.length / C.gather.radii.length);
+      const slot = Math.floor(i / C.gather.radii.length);
+      const a = -arc / 2 + arc * ((slot + 0.5 * (row % 2)) / Math.max(1, perRow - 1));
+      const R = C.gather.radii[row];
+      const gx = Math.sin(a) * R, gz = Math.cos(a) * R;
+      const askew = (C.askewDeg[0] + rnd() * (C.askewDeg[1] - C.askewDeg[0])) * deg * (rnd() < 0.5 ? -1 : 1);
+      const s = {
+        // Each level's pose: [x, z, yaw]. Yaw atan2(x, z) faces the origin.
+        poses: [[x, z, 0], [x, z, askew], [x, z, Math.atan2(x, z)], [gx, gz, Math.atan2(gx, gz)]],
+        offset: rnd() * C.spread, // when this chair starts misbehaving, relative to the others
+        level: 0,
+      };
+      this.chairs.setPose(i, ...s.poses[0]);
+      return s;
     });
     this.chairs.commit();
+    /** Set when the finale starts: the chairs come to the player. */
+    this.finale = false;
 
     // R12.txt
     this.log = data.r12.lines.slice();
@@ -57,11 +76,45 @@ export class Haunt {
   }
 
   /**
-   * Advances lights and chairs.
+   * How far the chairs have strayed. Rises through the shift up to
+   * `shiftMax` (askew, then facing the player), then jumps past every
+   * chair's final threshold once the finale starts (gathered).
+   * Chair i's level = floor((oddness - offset_i) / stepWidth), clamped to 0..3.
    * @param {number} progress 0..1 of the shift elapsed
-   * @param {boolean} lookingAway whether the player is turned from the screen
+   * @returns {number}
    */
-  update(progress, lookingAway) {
+  chairOddness(progress) {
+    const C = this.data.chairs;
+    return this.finale ? C.finaleOddness : this.ramp(progress, C.shiftStart, C.shiftEnd) * C.shiftMax;
+  }
+
+  /**
+   * Moves chairs on to their next level of wrongness. Only while the player
+   * faces the screen, so a chair is never seen to move; levels only rise.
+   * Runs during the finale too.
+   * @param {number} progress 0..1 of the shift elapsed
+   * @param {boolean} lookingAway
+   */
+  updateChairs(progress, lookingAway) {
+    if (lookingAway) return;
+    const odd = this.chairOddness(progress), step = this.data.chairs.stepWidth;
+    let moved = false;
+    this.chairState.forEach((s, i) => {
+      const level = Math.min(3, Math.max(0, Math.floor((odd - s.offset) / step)));
+      if (level > s.level) {
+        s.level = level;
+        this.chairs.setPose(i, ...s.poses[level]);
+        moved = true;
+      }
+    });
+    if (moved) this.chairs.commit();
+  }
+
+  /**
+   * Advances the dying lights.
+   * @param {number} progress 0..1 of the shift elapsed
+   */
+  update(progress) {
     // Lights: everything beyond the radius goes dark.
     const L = this.data.lightsOut;
     const k = this.ramp(progress, L.start, L.end);
@@ -86,20 +139,6 @@ export class Haunt {
         const a = Math.random() * Math.PI * 2;
         this.audio.breaker([Math.sin(a) * radius, 2.6, Math.cos(a) * radius]);
       }
-    }
-
-    // Chairs turn only while unwatched.
-    if (!lookingAway) {
-      const due = this.ramp(progress, this.data.chairs.start, this.data.chairs.end);
-      let moved = false;
-      this.chairState.forEach((s, i) => {
-        if (!s.turned && s.threshold < due) {
-          s.turned = true;
-          this.chairs.setYaw(i, s.facing);
-          moved = true;
-        }
-      });
-      if (moved) this.chairs.commit();
     }
   }
 

@@ -7,14 +7,18 @@
   },
 
   "chairs": {
-    "_comment": "Empty chairs in the open aisles. While the player faces the screen, more of them turn to face the player's cubicle.",
-    "start": 0.18, "end": 0.85,
-    "positions": [
-      [0.3, 2.2], [-1.5, 1.9], [1.7, 2.5], [2.1, 4.6], [-2.1, 4.4],
-      [-10.6, 1.8], [-6.9, 1.5], [-3.6, 2.1], [3.4, 1.6], [6.6, 2.2], [10.9, 1.7], [14.2, 1.9], [-14.5, 2.0],
-      [2.1, 6.1], [2.2, 10.3], [2.0, 14.6], [-2.1, 6.4], [-2.2, 10.0], [-2.0, 18.6],
-      [-8.4, 6.0], [8.5, 5.8], [6.3, 10.2], [-6.2, 14.4]
-    ]
+    "_comment": "Each chair belongs to a cubicle and starts in its right place: rolled back on that cubicle's centreline, facing its desk. Oddness then rises and each chair steps through levels: 0 home, 1 knocked askew, 2 facing the player, 3 gathered in a semicircle behind the player. Chairs only ever change while the player faces the screen.",
+    "homes": [
+      [4.2, 1.8], [-4.2, 1.8], [8.4, 1.8], [-8.4, 1.8], [12.6, 1.8], [-12.6, 1.8],
+      [0, 6.0], [4.2, 6.0], [-4.2, 6.0], [8.4, 6.0], [-8.4, 6.0],
+      [0, 10.2], [4.2, 10.2], [-4.2, 10.2],
+      [0, 14.4], [4.2, 14.4], [-4.2, 14.4]
+    ],
+    "shiftStart": 0.2, "shiftEnd": 0.95, "shiftMax": 0.7,
+    "finaleOddness": 1.5,
+    "stepWidth": 0.25, "spread": 0.3,
+    "askewDeg": [25, 70],
+    "gather": { "radii": [2.0, 2.8], "arcDeg": 120 }
   },
 
   "echo": {
