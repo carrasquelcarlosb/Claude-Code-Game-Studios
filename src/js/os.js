@@ -377,3 +377,14 @@ export class WorkOS {
     c.strokeStyle = '#000'; c.lineWidth = 1; c.stroke();
   }
 }
+
+/**
+ * Truncates text with an ellipsis to fit a pixel width in the current font.
+ * @returns {string}
+ */
+export function clipText(c, text, w) {
+  if (c.measureText(text).width <= w) return text;
+  let s = text;
+  while (s.length && c.measureText(s + '…').width > w) s = s.slice(0, -1);
+  return s + '…';
+}

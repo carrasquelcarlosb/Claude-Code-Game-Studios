@@ -1,4 +1,4 @@
-import { FONT, FONT_BOLD, bevel, inside, wrapText } from '../os.js';
+import { FONT, FONT_BOLD, bevel, inside, wrapText, clipText as clip } from '../os.js';
 
 /**
  * Holloway Mail: the email task. Each of the 13 messages must be answered with
@@ -184,9 +184,3 @@ export function createMail(data, { shift, os, onComplete }) {
   }
 }
 
-function clip(c, text, w) {
-  if (c.measureText(text).width <= w) return text;
-  let s = text;
-  while (s.length && c.measureText(s + '…').width > w) s = s.slice(0, -1);
-  return s + '…';
-}

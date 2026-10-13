@@ -7,14 +7,14 @@ import { CrtScreen } from './screen.js';
 import { Shift } from './shift.js';
 import { WorkOS } from './os.js';
 import { Input } from './input.js';
-import { placeholderApp } from './apps/placeholder.js';
+import { createOutreach } from './apps/outreach.js';
 import { createLedger } from './apps/ledger.js';
 import { createMail } from './apps/mail.js';
 
 /** Boots the game: loads tuning, builds the room and OS, runs the frame loop. */
 async function main() {
-  const [cfg, ledgerData, mailData] = await Promise.all(
-    ['./data/tuning.json', './data/ledger.json', './data/mail.json'].map((u) => fetch(u).then((r) => r.json())),
+  const [cfg, ledgerData, mailData, outreachData] = await Promise.all(
+    ['./data/tuning.json', './data/ledger.json', './data/mail.json', './data/outreach.json'].map((u) => fetch(u).then((r) => r.json())),
   );
   const canvas = document.getElementById('view');
   const debug = document.getElementById('debug');
@@ -37,18 +37,29 @@ async function main() {
     error: () => audio.errorChime(),
   });
 
-  // The ledger keeps its state when its window is closed and reopened.
-  let ledger = null;
+  // The round is complete once every task app reports done.
+  const done = new Set();
+  const markDone = (id) => () => {
+    done.add(id);
+    if (done.size === 3) onRoundComplete();
+  };
+  const onRoundComplete = () => {
+    // TODO(finale): un-deletable Management email, reveal and reset.
+    console.info('ROUND 13 complete', { lapses: shift.lapses, pay: shift.payText(), left: shift.clockText() });
+  };
+
+  // Apps keep their state when their window is closed and reopened.
+  let ledger = null, mail = null, outreach = null;
   os.install({ id: 'ledger', title: 'Ledger.xls', icon: 'XL', color: '#9cc890',
-    create: () => (ledger ||= createLedger(ledgerData, { shift, os, sfx: { error: () => audio.errorChime() } })) });
-  let mail = null;
+    create: () => (ledger ||= createLedger(ledgerData,
+      { shift, os, sfx: { error: () => audio.errorChime() }, onComplete: markDone('ledger') })) });
   os.install({
     id: 'mail', icon: '@', color: '#e8e0a0',
     get title() { return `Mail (${mail ? mail.unread() : mailData.messages.length})`; },
-    create: () => (mail ||= createMail(mailData, { shift, os })),
+    create: () => (mail ||= createMail(mailData, { shift, os, onComplete: markDone('mail') })),
   });
   os.install({ id: 'outreach', title: 'Outreach', icon: 'OP', color: '#d8a8a8',
-    create: () => placeholderApp('Outreach Pro 3.1', ['Campaigns awaiting approval: 13', '', 'Module installing...']) });
+    create: () => (outreach ||= createOutreach(outreachData, { shift, os, onComplete: markDone('outreach') })) });
   os.onReady = () => shift.start();
 
   shift.on('lapseEnd', ({ lapse, cost }) => {
