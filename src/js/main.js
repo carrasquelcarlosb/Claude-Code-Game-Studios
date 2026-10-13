@@ -16,12 +16,13 @@ import { Atmosphere } from './atmosphere.js';
 import { AmbientEvents } from './ambient-events.js';
 import { createFigure } from './figure.js';
 import { Feeds } from './feeds.js';
+import { Haunt } from './haunt.js';
 
-const DATA_FILES = ['tuning', 'ledger', 'mail', 'outreach', 'finale', 'ui', 'ambience'];
+const DATA_FILES = ['tuning', 'ledger', 'mail', 'outreach', 'finale', 'ui', 'ambience', 'haunt'];
 
 /** Boots the game: loads data, builds the room and OS, runs the frame loop. */
 async function main() {
-  const [cfg, ledgerData, mailData, outreachData, finaleData, uiData, ambienceData] = await Promise.all(
+  const [cfg, ledgerData, mailData, outreachData, finaleData, uiData, ambienceData, hauntData] = await Promise.all(
     DATA_FILES.map((f) => fetch(`./data/${f}.json`).then((r) => r.json())),
   );
   const canvas = document.getElementById('view');
@@ -66,6 +67,7 @@ async function main() {
     onEnd: (sum) => showEndCard(sum),
   });
   const onDread = (stage, repeats = 0) => dread.trigger(stage, repeats);
+  const haunt = new Haunt(hauntData, { room, audio, os, round });
 
   // --- Task apps ------------------------------------------------------------
   // The round is complete once every task app reports done.
@@ -107,6 +109,7 @@ async function main() {
   shift.on('rated', ({ by, stars, delta }) => os.toast(
     `${by} rated you ${starString(stars)}  ${delta >= 0 ? '+' : '-'}${Math.abs(delta).toFixed(2)}`, delta >= 0));
   shift.on('lapseEnd', ({ lapse, cost }) => {
+    haunt.onLapseEnd();
     os.dialog({
       title: `Attention Lapse #${lapse}`, alert: true,
       lines: ['The productivity monitor logged an absence', `from your workstation. Rating ★ -${cost.toFixed(2)}.`,
@@ -128,7 +131,7 @@ async function main() {
       const board = { k: 'knock', c: 'chairCreak', f: 'footsteps', t: 'typing' };
       if (DEBUG && board[e.key]) return dread.trigger({ sound: board[e.key] }, 0);
       if (DEBUG && e.key === 'p') return audio.phone([0.5, 0.8, 3.4]);
-      if (!e.repeat) audio.keyClack();
+      if (!e.repeat) { audio.keyClack(); if (shift.running) haunt.onKey(shift.progress); }
       os.key(e);
     },
     lock: (locked) => {
@@ -170,7 +173,7 @@ async function main() {
     overlay.style.display = 'flex';
   };
 
-  if (DEBUG) window.__debug = { rig, room, os, shift, dread, finale, atmosphere, ambient, feeds, figure, setPaused: (p) => { paused = p; } };
+  if (DEBUG) window.__debug = { rig, room, os, shift, dread, finale, atmosphere, ambient, feeds, figure, haunt, setPaused: (p) => { paused = p; } };
 
   // --- Frame loop -------------------------------------------------------------
   const clock = new THREE.Clock();
@@ -184,10 +187,15 @@ async function main() {
       os.update(dt);
       finale.update(dt);
       shift.update(dt, rig.lookingAway);
-      if (shift.running) ambient.update(shift.progress * cfg.shift.durationSec, rig.lookingAway);
+      if (shift.running) {
+        ambient.update(shift.progress * cfg.shift.durationSec, rig.lookingAway);
+        haunt.update(shift.progress, rig.lookingAway);
+      }
     }
     // Mood: bright and sterile at clock-in, draining with time and rating.
-    const gloom = finale.active ? 1 : atmosphere.gloomFor(shift.progress, shift.rating, cfg.shift.startingRating);
+    // The office is as gloomy as the worse of time, rating, and how far the dark has come.
+    const gloom = finale.active ? 1
+      : Math.max(atmosphere.gloomFor(shift.progress, shift.rating, cfg.shift.startingRating), haunt.darkness);
     audio.setBuzz(atmosphere.update(dt, gloom));
     pipeline.uniforms.uExposure.value = atmosphere.exposure;
     audio.setTension(shift.progress, shift.running && shift.remaining < 60);

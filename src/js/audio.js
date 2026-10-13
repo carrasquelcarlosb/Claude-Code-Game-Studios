@@ -316,6 +316,41 @@ export class Ambience {
     src.start();
   }
 
+  /**
+   * A bank of ceiling lights cutting out far away: a heavy breaker clunk and
+   * the tail of a dying ballast hum.
+   * @param {number[]} pos [x, y, z]
+   */
+  breaker(pos) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.9), d = new Float32Array(len);
+    let y = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      y += 0.06 * ((Math.random() * 2 - 1) - y);
+      const clunk = (Math.sin(2 * Math.PI * 48 * t) * 0.8 + y * 2.5) * Math.exp(-t * 18);
+      const hum = Math.sin(2 * Math.PI * 120 * t) * 0.12 * Math.exp(-t * 4) * (t > 0.03 ? 1 : 0);
+      d[i] = clunk + hum;
+    }
+    this.playBuffer(d, this.muffled(700, pos, 1.6, this.cfg.ambientVolume));
+  }
+
+  /**
+   * One keystroke on someone else's keyboard, somewhere in the room.
+   * @param {number[]} pos [x, y, z]
+   * @param {number} delay seconds from now
+   */
+  echoClack(pos, delay) {
+    if (!this.ctx) return;
+    const sr = this.ctx.sampleRate, len = Math.floor(sr * 0.05), d = new Float32Array(len);
+    const f = 1800 + Math.random() * 1400;
+    for (let k = 0; k < len; k++) {
+      d[k] = (Math.random() * 2 - 1) * Math.exp(-k / (sr * 0.006)) * 0.7
+        + Math.sin(2 * Math.PI * f * k / sr) * Math.exp(-k / (sr * 0.002)) * 0.3;
+    }
+    this.playBuffer(d, this.muffled(2400, pos, 1.1, this.cfg.ambientVolume), delay);
+  }
+
   /** Routes a node through a lowpass into a positioned panner; returns the filter input. */
   muffled(cutoff, pos, gain, bus) {
     const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cutoff;

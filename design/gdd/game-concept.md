@@ -291,6 +291,25 @@ single scare at the climax of the finale:
   meets its face at eye height.
 - A content note on the title screen: "Contains one sudden scare."
 
+**Dread as a condition, not just moments (the haunting)**: four quiet systems
+escalate with shift progress so the room is never safe to stop watching.
+Tuning lives in `src/data/haunt.json`.
+
+- **The dark is coming**: ceiling lights die bank by bank from the far edge
+  towards the player's desk, each bank with a distant breaker clunk. Office
+  gloom follows how far the dark has come.
+- **The chairs**: empty chairs in the aisles behind the player turn to face
+  the player's cubicle, only ever while the player faces the screen. Nobody
+  sees one move.
+- **R12.txt**: after the first look-away, the previous operator's log appears
+  on the desktop. Each later look-away adds a line about tonight ("round 13
+  you looked"), sometimes opens it, or moves the cursor. Things happen while
+  you are not watching.
+- **Someone types back**: the player's keystrokes are echoed a beat late by
+  another keyboard behind them, far at first and closer as the shift goes on.
+
+The figure itself still never appears in the room before the final scare.
+
 **Visual Identity Anchor amendment**: the "slightly too clean" rule now opens
 the round literally, as bright and sterile. Darkness is earned through time and
 a falling rating, not given up front. Dread lights-out stings still go fully dark.
