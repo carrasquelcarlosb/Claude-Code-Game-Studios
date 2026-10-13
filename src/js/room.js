@@ -229,8 +229,9 @@ export function buildRoom(cfg, screenTexture, notes = 12) {
 
 /**
  * Office chairs belonging to the other cubicles, standing in the aisles.
- * Seat and back are separate instanced meshes so each chair can be placed
- * and turned independently.
+ * Built like the player's chair (cushion, backrest, pole, star base) so they
+ * read as chairs even in silhouette. Each part is an InstancedMesh so every
+ * chair can be placed and turned independently.
  * @param {THREE.Scene} scene
  * @param {number[]} snap vertex snap grid
  * @param {number} count how many chairs
@@ -238,16 +239,31 @@ export function buildRoom(cfg, screenTexture, notes = 12) {
  */
 function buildChairs(scene, snap, count) {
   const fabric = lambert(null, snap, { color: '#7c8088' }); // lighter than the player's, so silhouettes read
-  const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.5, 0.48), fabric, count);
-  const back = new THREE.InstancedMesh(new THREE.BoxGeometry(0.46, 0.46, 0.07), fabric, count);
-  scene.add(seat, back);
+  const metal = lambert(null, snap, { color: '#8a8c90' });
+  // Each part: geometry, material, and its offset in chair space [right, up, back].
+  const parts = [
+    [new THREE.BoxGeometry(0.48, 0.08, 0.46), fabric, [0, 0.5, 0]],      // cushion
+    [new THREE.BoxGeometry(0.44, 0.48, 0.06), fabric, [0, 0.84, 0.24]],  // backrest
+    [new THREE.BoxGeometry(0.04, 0.22, 0.04), metal, [0, 0.66, 0.26]],   // backrest stem
+    [new THREE.BoxGeometry(0.05, 0.42, 0.05), metal, [0, 0.25, 0]],      // gas pole
+    [new THREE.BoxGeometry(0.56, 0.035, 0.05), metal, [0, 0.05, 0]],     // base, one arm
+    [new THREE.BoxGeometry(0.05, 0.035, 0.56), metal, [0, 0.05, 0]],     // base, cross arm
+  ].map(([geo, mat, off]) => {
+    const mesh = new THREE.InstancedMesh(geo, mat, count);
+    scene.add(mesh);
+    return { mesh, off };
+  });
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0);
   /** Places chair i at (x, z). Yaw 0 faces -Z (towards a desk); the back sits behind the sitter. */
   const setPose = (i, x, z, yaw) => {
     q.setFromAxisAngle(up, yaw);
-    m.compose(new THREE.Vector3(x, 0.27, z), q, one); seat.setMatrixAt(i, m);
-    m.compose(new THREE.Vector3(x + Math.sin(yaw) * 0.26, 0.75, z + Math.cos(yaw) * 0.26), q, one); back.setMatrixAt(i, m);
+    const s = Math.sin(yaw), c = Math.cos(yaw);
+    for (const { mesh, off: [r, u, b] } of parts) {
+      // Rotate the part's offset by yaw: local +X (right) and +Z (back).
+      m.compose(new THREE.Vector3(x + r * c + b * s, u, z - r * s + b * c), q, one);
+      mesh.setMatrixAt(i, m);
+    }
   };
-  const commit = () => { seat.instanceMatrix.needsUpdate = true; back.instanceMatrix.needsUpdate = true; };
+  const commit = () => parts.forEach(({ mesh }) => { mesh.instanceMatrix.needsUpdate = true; });
   return { count, setPose, commit };
 }

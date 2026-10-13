@@ -173,7 +173,7 @@ async function main() {
     overlay.style.display = 'flex';
   };
 
-  if (DEBUG) window.__debug = { rig, room, os, shift, dread, finale, atmosphere, ambient, feeds, figure, haunt, setPaused: (p) => { paused = p; } };
+  if (DEBUG) window.__debug = { renderer, pipeline, rig, room, os, shift, dread, finale, atmosphere, ambient, feeds, figure, haunt, setPaused: (p) => { paused = p; } };
 
   // --- Frame loop -------------------------------------------------------------
   const clock = new THREE.Clock();
