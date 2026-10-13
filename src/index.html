@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ROUND 13</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center; }
+    canvas#view { display: block; width: min(100vw, 133.333vh); height: min(75vw, 100vh); image-rendering: pixelated; cursor: none; }
+    #debug {
+      position: fixed; left: 8px; top: 8px; color: #8f8; font: 12px monospace;
+      background: rgba(0,0,0,.5); padding: 4px 6px; pointer-events: none; white-space: pre;
+    }
+    #start {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #9fc4b8; font: 16px monospace; background: #000; cursor: pointer; letter-spacing: 2px;
+    }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="debug"></div>
+  <div id="start">CLICK TO CLOCK IN</div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

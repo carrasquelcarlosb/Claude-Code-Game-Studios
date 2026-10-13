@@ -1,0 +1,54 @@
+{
+  "render": {
+    "width": 640,
+    "height": 480,
+    "vertexSnap": [320, 240],
+    "colorLevels": 32,
+    "ditherStrength": 1.0
+  },
+  "camera": {
+    "eyeHeight": 1.18,
+    "workFov": 36,
+    "lookFov": 64,
+    "maxYawDeg": 170,
+    "maxPitchDeg": 55,
+    "lookSensitivity": 0.0035,
+    "returnSpeed": 3.2,
+    "lookSmoothing": 14,
+    "lookAwayThresholdDeg": 32
+  },
+  "input": {
+    "cursorSpeed": 0.55
+  },
+  "shift": {
+    "durationSec": 780,
+    "startingPay": 0,
+    "payPerTask": 1.13,
+    "awayTimeMultiplier": 2,
+    "awayPenaltyPerSec": 0.13
+  },
+  "os": {
+    "bootSeconds": 4
+  },
+  "room": {
+    "gridRadius": 7,
+    "cubicleSpacing": 4.2,
+    "ceilingHeight": 2.8,
+    "fogNear": 3,
+    "fogFar": 26
+  },
+  "lighting": {
+    "fluorescentIntensity": 2.2,
+    "flickerChancePerSecond": 0.35,
+    "monitorIntensity": 0.5,
+    "ambientIntensity": 0.12
+  },
+  "audio": {
+    "masterVolume": 0.5,
+    "roomToneVolume": 0.35,
+    "humVolume": 0.12,
+    "crtWhineVolume": 0.015,
+    "keyVolume": 0.55,
+    "uiVolume": 0.18
+  }
+}

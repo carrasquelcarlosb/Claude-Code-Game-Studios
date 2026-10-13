@@ -1,0 +1,22 @@
+{
+  "title": "Ledger.xls",
+  "intro": "Copy each Source Code into the Entry column. Enter to commit.",
+  "completeTitle": "Ledger Reconciled",
+  "completeLines": ["13 of 13 rows reconciled.", "", "Please proceed to Mail. You have messages."],
+  "rows": [
+    { "code": "4820193746513" },
+    { "code": "7391046285027" },
+    { "code": "1059382746190" },
+    { "code": "6131331307742", "note": "Pattern check: OK." },
+    { "code": "2947561038826" },
+    { "code": "8302917465031" },
+    { "code": "5518203947612", "prefill": true, "note": "AutoComplete: value restored from previous session." },
+    { "code": "3069128475503" },
+    { "code": "9274610385517", "note": "This row has been flagged in 12 previous sessions." },
+    { "code": "1846203957739" },
+    { "code": "0000000000013", "note": "" },
+    { "code": "4820193746513", "note": "Duplicate of Row 1. This has happened before." },
+    { "code": "?????????????", "acceptAny": true, "note": "Source missing. Enter your operator number.",
+      "doneNote": "Operator number recorded for Round 14." }
+  ]
+}

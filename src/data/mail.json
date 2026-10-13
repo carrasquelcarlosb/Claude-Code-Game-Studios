@@ -1,0 +1,73 @@
+{
+  "title": "Inbox - Holloway Mail",
+  "time": "11:13 PM",
+  "completeTitle": "Inbox Zero",
+  "completeLines": ["All 13 messages answered.", "", "Outreach campaigns are awaiting your approval."],
+  "messages": [
+    {
+      "from": "HR Department", "subject": "Welcome back to your shift",
+      "body": "Hello,\n\nThank you for working the late shift again. Please reconcile your ledger, respond to all correspondence and approve pending outreach before 00:00.\n\nRemember: Productivity is Presence.\n\nHR",
+      "replies": ["Thanks for the heads up!", "Noted, will action ASAP.", "Happy to be here."]
+    },
+    {
+      "from": "IT Helpdesk", "subject": "Scheduled maintenance tonight",
+      "body": "Systems will be restarted at the end of this shift. Unsaved work will be lost. Please do not power off Workstation 13 under any circumstances.\n\nIT",
+      "replies": ["Understood, thanks.", "Appreciate the visibility.", "Will keep this top of mind."]
+    },
+    {
+      "from": "Dana Price (Accounts)", "subject": "RE: Q3 ledger variance",
+      "body": "Hi,\n\nThe Q3 numbers still don't reconcile. Can you take another pass at the ledger tonight? I know you've looked at it before.\n\nDana",
+      "replies": ["On it. Will circle back.", "Let me dig in and revert.", "Per my last email, it's handled."]
+    },
+    {
+      "from": "Facilities", "subject": "Overhead light, Floor 13",
+      "body": "We are aware the overhead light in your section flickers. A ticket has been open since Round 1. There is no Floor 13 on our building plans, but we will send someone.\n\nFacilities",
+      "replies": ["Thanks, no rush.", "Appreciate you looking into it.", "Happy to sync on next steps."]
+    },
+    {
+      "from": "Mark Ellis", "subject": "RE: RE: lunch?",
+      "body": "Still on for lunch tomorrow? You said yes last time.\n\nAnd the time before that.\n\nM",
+      "replies": ["Yes, let's do it!", "Let's pencil something in.", "Let's take this offline."]
+    },
+    {
+      "from": "HR Department", "subject": "Mandatory: Presence Policy",
+      "body": "A reminder that all time away from your screen is logged by the productivity monitor and deducted from your pay.\n\nThere is nothing behind you that requires your attention.\n\nHR",
+      "replies": ["Acknowledged.", "Thanks for the reminder.", "Fully aligned."]
+    },
+    {
+      "from": "Dana Price (Accounts)", "subject": "RE: RE: RE: Q3 ledger variance",
+      "body": "You sent me this exact reply already.\n\nWord for word. Same timestamp. Is your mail client looping?\n\nDana",
+      "replies": ["Apologies, will investigate.", "Let me circle back on that.", "Per my last email."]
+    },
+    {
+      "from": "Mail Delivery System", "subject": "Your automatic reply",
+      "body": "The following automatic reply was generated on your behalf in each of the previous 12 rounds:\n\n    \"{lastReply}\"\n\nNo action is required.",
+      "replies": ["Thanks.", "Thanks.", "Noted."]
+    },
+    {
+      "from": "IT Helpdesk", "subject": "Unusual activity at Workstation 13",
+      "body": "Our logs show continuous keyboard input at Workstation 13, but the badge reader shows nobody entered the building tonight.\n\nCan you confirm you are at your desk?\n\nIT",
+      "replies": ["Confirmed, I'm at my desk.", "Yes, I'm here.", "Where else would I be?"]
+    },
+    {
+      "from": "Mark Ellis", "subject": "RE: RE: RE: RE: lunch?",
+      "body": "I walked past your cubicle a minute ago. The chair was empty.\n\nBut the keyboard was still going.\n\nM",
+      "replies": ["Must have been on a break.", "Let's take this offline.", "I'm right here, Mark."]
+    },
+    {
+      "from": "WORKSTATION 12", "subject": "(no subject)",
+      "body": "is anyone else still here\n\nthe lights stopped flickering on my side\n\nwhat round are you on",
+      "replies": ["Round 13.", "Please contact IT.", "Wrong recipient."]
+    },
+    {
+      "from": "HR Department", "subject": "Exit interview: Round 12",
+      "body": "Thank you for your service in Round 12. Your performance has been archived.\n\nYour replacement is already at their desk and has completed onboarding. They will not notice you.\n\nHR",
+      "replies": ["Thank you.", "Thank you.", "Thank you."]
+    },
+    {
+      "from": "Management", "subject": "Please finish your tasks",
+      "body": "Finish your work.\n\nThen we can talk.",
+      "replies": ["Understood.", "Understood.", "Understood."]
+    }
+  ]
+}
